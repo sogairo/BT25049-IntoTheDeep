@@ -13,22 +13,6 @@ import com.qualcomm.robotcore.hardware.Servo;
 
 @TeleOp(name = "BT25046-Drive", group = "Competition")
 public class DriveTeleOp extends LinearOpMode {
-    // PID Setup
-    private PIDController controller;
-    public double p = 0, i = 0, d = 0;
-    public double f = 0;
-
-    public double CalculatePIDPower(DcMotor Motor, int Target) {
-        final double feedForwardConstant = 700 / 180.0;
-
-        controller.setPID(p, i, d);
-        int leftSpoolPosition = Motor.getCurrentPosition();
-        double PID = controller.calculate(leftSpoolPosition, Target);
-        double feedForward = Math.cos(Math.toRadians(Target / feedForwardConstant)) * f;
-
-        return PID + feedForward;
-    }
-
     // On Initialize
     @Override
     public void runOpMode() throws InterruptedException {
@@ -39,9 +23,9 @@ public class DriveTeleOp extends LinearOpMode {
 
         final int MAX_SPOOL_POSITION = 1620;
         final int MIN_SPOOL_POSITION = 0;
-        final int SPOOL_INCREMENT = 10; // Need adjustments?
+        final int SPOOL_INCREMENT = 30;
 
-        final double MAX_ARM_POSITION = 1;
+        final double MAX_ARM_POSITION = 0.93;
         final double MIN_ARM_POSITION = 0;
         final double ARM_INCREMENT = 0.02;
 
@@ -51,6 +35,10 @@ public class DriveTeleOp extends LinearOpMode {
 
         boolean pressXDebounce = false;
         boolean pressYDebounce = false;
+
+        // PID Setup
+        PIDController controller;
+        double p = 0.004, i = 0.2, d = 0.02;
 
         controller = new PIDController(p, i ,d);
         telemetry = new MultipleTelemetry(telemetry, FtcDashboard.getInstance().getTelemetry());
@@ -104,6 +92,7 @@ public class DriveTeleOp extends LinearOpMode {
         if (isStopRequested()) return;
 
         while (opModeIsActive()) {
+            controller.setPID(p, i, d);
             // Claw Information
             //
             // It literally opens and closes the claw... What do you expect?
@@ -162,10 +151,10 @@ public class DriveTeleOp extends LinearOpMode {
                     currentSpoolPosition -= SPOOL_INCREMENT;
                 }
             }
-            spoolLeftMotor.setPower(CalculatePIDPower(spoolLeftMotor, currentSpoolPosition));
+            spoolLeftMotor.setPower(controller.calculate(spoolLeftMotor.getCurrentPosition(), currentSpoolPosition));
             spoolLeftMotor.setTargetPosition(currentSpoolPosition);
 
-            spoolRightMotor.setPower(CalculatePIDPower(spoolRightMotor, currentSpoolPosition));
+            spoolRightMotor.setPower(controller.calculate(spoolRightMotor.getCurrentPosition(), currentSpoolPosition));
             spoolRightMotor.setTargetPosition(currentSpoolPosition);
 
             // --------------------------------------------------------------------
@@ -238,7 +227,6 @@ public class DriveTeleOp extends LinearOpMode {
             telemetry.addData("currentSpoolPosition", currentSpoolPosition);
             telemetry.addData("Motor0 Position", spoolLeftMotor.getCurrentPosition());
             telemetry.addData("Motor1 Position", spoolRightMotor.getCurrentPosition());
-            telemetry.addData("------------", "------------");
 
             telemetry.update();
         }
