@@ -3,6 +3,11 @@
 This is BT25049/BudjetTech's code used for the 2024-2025 FTC Into The Deep competition.  
 <sup><sub>This code was written by their sole coder.</sub></sup>
 
+# Table of Contents
+
+- [Viewing the Code](#viewing-the-code)
+- [Notes](#notes)
+
 # Viewing the Code
 
 Check if your Android SDK on **Android 15.0** ( _"VanillaIceCream", API Level: 35_ ). If not, change it to that.
