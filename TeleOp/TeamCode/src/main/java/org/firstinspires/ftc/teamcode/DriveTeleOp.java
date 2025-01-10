@@ -1,7 +1,5 @@
 package org.firstinspires.ftc.teamcode;
 
-import com.acmerobotics.dashboard.FtcDashboard;
-import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
 import com.arcrobotics.ftclib.controller.PIDController;
 
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
@@ -18,8 +16,6 @@ public class DriveTeleOp extends LinearOpMode {
     public void runOpMode() throws InterruptedException {
         // Initialize Constants
         final double MOTOR_POWER_CONSTRAINT = 0.8;
-
-        final double SPOOL_MOTOR_POWER = 1.0;
 
         final int MAX_SPOOL_POSITION = 1620;
         final int MIN_SPOOL_POSITION = 0;
@@ -41,7 +37,6 @@ public class DriveTeleOp extends LinearOpMode {
         double p = 0.004, i = 0.2, d = 0.02;
 
         controller = new PIDController(p, i ,d);
-        telemetry = new MultipleTelemetry(telemetry, FtcDashboard.getInstance().getTelemetry());
 
         // Drivetrain Configuration.
         DcMotor topLeftMotor = hardwareMap.dcMotor.get("topLeft");
@@ -92,7 +87,6 @@ public class DriveTeleOp extends LinearOpMode {
         if (isStopRequested()) return;
 
         while (opModeIsActive()) {
-            controller.setPID(p, i, d);
             // Claw Information
             //
             // It literally opens and closes the claw... What do you expect?
@@ -138,6 +132,7 @@ public class DriveTeleOp extends LinearOpMode {
             // being in it's initial position ( all the way down ) with starting
             // the bot.
 
+            controller.setPID(p, i, d);
             if (gamepad1.right_trigger > 0) {
                 if ((currentSpoolPosition + SPOOL_INCREMENT) >= MAX_SPOOL_POSITION) {
                     currentSpoolPosition = MAX_SPOOL_POSITION;

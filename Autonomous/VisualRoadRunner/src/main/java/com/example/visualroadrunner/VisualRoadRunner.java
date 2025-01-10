@@ -13,17 +13,17 @@ public class VisualRoadRunner {
         // this is the configuration part / tuning
         RoadRunnerBotEntity myBot = new DefaultBotBuilder(meepMeep)
                 // Set bot constraints: maxVel, maxAccel, maxAngVel, maxAngAccel, track width
-                .setConstraints(60, 60, Math.toRadians(180), Math.toRadians(180), 15)
+                .setConstraints(120, 120, Math.toRadians(180), Math.toRadians(180), 15)
                 .build();
 
         // actual path
-        myBot.runAction(myBot.getDrive().actionBuilder(new Pose2d(23, -60, Math.toRadians(90)))
+        myBot.runAction(myBot.getDrive().actionBuilder(new Pose2d(25.5, -61.5, Math.toRadians(90)))
                 // put on specimen
                 .strafeTo(new Vector2d(0, -36))
 
                 // push first sample
-                .turn(Math.toRadians(180))
-                .strafeTo(new Vector2d(25, -36))
+                .turn(Math.toRadians(-90))
+                .strafeTo(new Vector2d(17.5, -36))
                 .splineTo(new Vector2d(47.5, -10), Math.toRadians(0))
                 .strafeTo(new Vector2d(47.5, -55))
 
@@ -36,6 +36,9 @@ public class VisualRoadRunner {
                 .strafeTo(new Vector2d(58, -10))
                 .strafeTo(new Vector2d(61, -10))
                 .strafeTo(new Vector2d(61, -55))
+
+                // back to default position
+                .strafeTo(new Vector2d(25.5, -61.5))
 
                 .build());
 
