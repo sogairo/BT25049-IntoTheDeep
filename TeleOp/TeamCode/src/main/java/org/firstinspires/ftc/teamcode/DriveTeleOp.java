@@ -17,7 +17,7 @@ public class DriveTeleOp extends LinearOpMode {
     @Override
     public void runOpMode() throws InterruptedException {
         // Initialize Constants
-        final double MOTOR_POWER_CONSTRAINT = 0.65;
+        final double MOTOR_POWER_CONSTRAINT = 0.8;
 
         final double SPOOL_MOTOR_POWER = 1.0;
 
@@ -25,7 +25,7 @@ public class DriveTeleOp extends LinearOpMode {
         final int MIN_SPOOL_POSITION = 0;
         final int SPOOL_INCREMENT = 30;
 
-        final double MAX_ARM_POSITION = 0.93;
+        final double MAX_ARM_POSITION = 0.9;
         final double MIN_ARM_POSITION = 0;
         final double ARM_INCREMENT = 0.02;
 
