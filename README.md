@@ -27,4 +27,4 @@ Do the following to view the code for Autonomous:
 If you are to copy the Autonomous code for your new season, you will need to tune it to your new robot.
 Follow the steps on [RoadRunner Documention](https://learnroadrunner.com/feedforward-tuning.html) to tune your robot. ( _You will need to every single tuning it says, except for deadwheels if you aren't using them._ )
 
-If you are to copy the PID used in the DriveTeleOp, you will also need to tune it to your new robot ( _The "p", "i", "d", and "f" variables_ ). Tuning can be done in the FTC Dashboard for the PID.
+If you are to copy the PID used in the DriveTeleOp, you will also need to tune it to your new robot ( _The "p", "i", and "d" variables,_ ). Tuning can be done in the FTC Dashboard for the PID.
