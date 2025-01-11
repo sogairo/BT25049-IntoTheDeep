@@ -15,22 +15,29 @@ public class DriveTeleOp extends LinearOpMode {
     @Override
     public void runOpMode() throws InterruptedException {
         // Initialize Constants
-        final double MOTOR_POWER_CONSTRAINT = 0.8;
+        final double DRIVE_POWER_CONSTRAINT = 0.8;
 
-        final int MAX_SPOOL_POSITION = 1620;
+        final int MAX_SPOOL_POSITION = 1610;
         final int MIN_SPOOL_POSITION = 0;
         final int SPOOL_INCREMENT = 30;
+        final int SAMPLE_BASKET_POSITION = 1610;
+        final int SPECIMEN_POSITION = 800;
 
-        final double MAX_ARM_POSITION = 0.9;
+        final double MAX_ARM_POSITION = 0.96;
+        final double MID_ARM_POSITION = 0.36;
         final double MIN_ARM_POSITION = 0;
         final double ARM_INCREMENT = 0.02;
 
         // Initialize Variables.
         int currentSpoolPosition = MIN_SPOOL_POSITION;
+        int setPositionType = SAMPLE_BASKET_POSITION;
+
         double currentArmPosition = MIN_ARM_POSITION;
 
         boolean pressXDebounce = false;
         boolean pressYDebounce = false;
+        boolean pressBDebounce = false;
+        boolean pressADebounce = false;
 
         // PID Setup
         PIDController controller;
@@ -50,15 +57,19 @@ public class DriveTeleOp extends LinearOpMode {
 
         // Claw Configuration.
         Servo remadeClawServo = hardwareMap.servo.get("remadeClaw");
+        remadeClawServo.setPosition(0);
 
         // Claw Pivot Configuration.
         Servo clawPivot = hardwareMap.servo.get("clawPivot");
+        clawPivot.setPosition(0);
 
         // Arm Configuration.
         Servo armRightServo = hardwareMap.servo.get("armRight");
         armRightServo.setDirection(Servo.Direction.REVERSE);
+        armRightServo.setPosition(currentArmPosition);
 
         Servo armLeftServo = hardwareMap.servo.get("armLeft");
+        armLeftServo.setPosition(currentArmPosition);
 
         // Spool Linear Slides Configuration.
         DcMotor spoolLeftMotor = hardwareMap.dcMotor.get("spoolLeft");
@@ -112,16 +123,16 @@ public class DriveTeleOp extends LinearOpMode {
             // Make sure the Servo's 0 and 1 positions are programmed using a
             // Servo programmer.
 
-            if (gamepad1.y && !pressYDebounce) {
-                pressYDebounce = true;
+            if (gamepad1.a && !pressADebounce) {
+                pressADebounce = true;
 
                 if (clawPivot.getPosition() == 0) {
                     clawPivot.setPosition(1);
                 } else {
                     clawPivot.setPosition(0);
                 }
-            } else if (!gamepad1.y && pressYDebounce) {
-                pressYDebounce = false;
+            } else if (!gamepad1.a && pressADebounce) {
+                pressADebounce = false;
             }
 
             // --------------------------------------------------------------------
@@ -132,6 +143,7 @@ public class DriveTeleOp extends LinearOpMode {
             // being in it's initial position ( all the way down ) with starting
             // the bot.
 
+            // manual linear slide movement
             controller.setPID(p, i, d);
             if (gamepad1.right_trigger > 0) {
                 if ((currentSpoolPosition + SPOOL_INCREMENT) >= MAX_SPOOL_POSITION) {
@@ -146,6 +158,31 @@ public class DriveTeleOp extends LinearOpMode {
                     currentSpoolPosition -= SPOOL_INCREMENT;
                 }
             }
+
+            // toggle
+            if (gamepad1.b && !pressBDebounce) {
+                pressBDebounce = true;
+                if (setPositionType == SPECIMEN_POSITION) {
+                    setPositionType = SAMPLE_BASKET_POSITION;
+                } else {
+                    setPositionType = SPECIMEN_POSITION;
+                }
+            } else if (!gamepad1.b && pressBDebounce) {
+                pressBDebounce = false;
+            }
+
+            // shortcut to sample/specimen position
+            if (gamepad1.y && !pressYDebounce) {
+                pressYDebounce = true;
+                if (currentSpoolPosition != setPositionType) {
+                    currentSpoolPosition = setPositionType;
+                } else {
+                    currentSpoolPosition = MIN_SPOOL_POSITION;
+                }
+            } else if (!gamepad1.y && pressYDebounce) {
+                pressYDebounce = false;
+            }
+
             spoolLeftMotor.setPower(controller.calculate(spoolLeftMotor.getCurrentPosition(), currentSpoolPosition));
             spoolLeftMotor.setTargetPosition(currentSpoolPosition);
 
@@ -161,6 +198,7 @@ public class DriveTeleOp extends LinearOpMode {
             //
             // Too bad that PIDs don't work/exist for Servos... or do they...?
 
+            // manual
             if (gamepad1.right_bumper) {
                 if ((currentArmPosition + ARM_INCREMENT) >= MAX_ARM_POSITION) {
                     currentArmPosition = MAX_ARM_POSITION;
@@ -174,6 +212,16 @@ public class DriveTeleOp extends LinearOpMode {
                     currentArmPosition -= ARM_INCREMENT;
                 }
             }
+
+            // shortcuts
+            if (gamepad1.dpad_up) {
+                currentArmPosition = MID_ARM_POSITION;
+            } else if (gamepad1.dpad_left) {
+                currentArmPosition = MAX_ARM_POSITION;
+            } else if (gamepad1.dpad_right) {
+                currentArmPosition = MIN_ARM_POSITION;
+            }
+
             armRightServo.setPosition(currentArmPosition);
             armLeftServo.setPosition(currentArmPosition);
 
@@ -188,10 +236,10 @@ public class DriveTeleOp extends LinearOpMode {
             double denominator = Math.max(Math.abs(y) + Math.abs(x) + Math.abs(rx), 1);
 
             // Calculate motor power allocation that is constraint by preset constant.
-            double topLeftPower = ((y + x + rx) / denominator) * MOTOR_POWER_CONSTRAINT;
-            double bottomLeftPower = ((y - x + rx) / denominator) * MOTOR_POWER_CONSTRAINT;
-            double topRightPower = ((y - x - rx) / denominator) * MOTOR_POWER_CONSTRAINT;
-            double bottomRightPower = ((y + x - rx) / denominator) * MOTOR_POWER_CONSTRAINT;
+            double topLeftPower = ((y + x + rx) / denominator) * DRIVE_POWER_CONSTRAINT;
+            double bottomLeftPower = ((y - x + rx) / denominator) * DRIVE_POWER_CONSTRAINT;
+            double topRightPower = ((y - x - rx) / denominator) * DRIVE_POWER_CONSTRAINT;
+            double bottomRightPower = ((y + x - rx) / denominator) * DRIVE_POWER_CONSTRAINT;
 
             // Set calculated motor power into the motors.
             topLeftMotor.setPower(topLeftPower);
@@ -217,6 +265,11 @@ public class DriveTeleOp extends LinearOpMode {
             telemetry.addData("Servo3 Position", armRightServo.getPosition());
             telemetry.addData("------------", "------------");
 
+            if (setPositionType == SPECIMEN_POSITION) {
+                telemetry.addData("Toggled State", "SPECIMEN");
+            } else {
+                telemetry.addData("Toggled State", "SAMPLE");
+            }
             telemetry.addData("RightTrigger", gamepad1.right_trigger > 0);
             telemetry.addData("LeftTrigger", gamepad1.left_trigger > 0);
             telemetry.addData("currentSpoolPosition", currentSpoolPosition);
