@@ -21,11 +21,12 @@ public class DriveTeleOp extends LinearOpMode {
         final int MIN_SPOOL_POSITION = 0;
         final int SPOOL_INCREMENT = 30;
         final int SAMPLE_BASKET_POSITION = 1610;
-        final int SPECIMEN_POSITION = 800;
+        final int SPECIMEN_POSITION = 415;
 
         final double MAX_ARM_POSITION = 0.96;
-        final double MID_ARM_POSITION = 0.36;
         final double MIN_ARM_POSITION = 0;
+        final double ARM_DROP_POSITION = 0.4;
+        final double ARM_GRAB_POSITION = 0.9;
         final double ARM_INCREMENT = 0.02;
 
         // Initialize Variables.
@@ -39,12 +40,6 @@ public class DriveTeleOp extends LinearOpMode {
         boolean pressBDebounce = false;
         boolean pressADebounce = false;
 
-        // PID Setup
-        PIDController controller;
-        double p = 0.004, i = 0.2, d = 0.02;
-
-        controller = new PIDController(p, i ,d);
-
         // Drivetrain Configuration.
         DcMotor topLeftMotor = hardwareMap.dcMotor.get("topLeft");
         DcMotor bottomLeftMotor = hardwareMap.dcMotor.get("bottomLeft");
@@ -57,11 +52,11 @@ public class DriveTeleOp extends LinearOpMode {
 
         // Claw Configuration.
         Servo remadeClawServo = hardwareMap.servo.get("remadeClaw");
-        remadeClawServo.setPosition(0);
+        remadeClawServo.setPosition(1);
 
         // Claw Pivot Configuration.
         Servo clawPivot = hardwareMap.servo.get("clawPivot");
-        clawPivot.setPosition(0);
+        clawPivot.setPosition(1);
 
         // Arm Configuration.
         Servo armRightServo = hardwareMap.servo.get("armRight");
@@ -80,7 +75,7 @@ public class DriveTeleOp extends LinearOpMode {
 
         spoolLeftMotor.setTargetPosition(MIN_SPOOL_POSITION);
         spoolLeftMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        spoolLeftMotor.setPower(1);
+        spoolLeftMotor.setPower(0.01);
 
         DcMotor spoolRightMotor = hardwareMap.dcMotor.get("spoolRight");
         spoolRightMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
@@ -91,7 +86,13 @@ public class DriveTeleOp extends LinearOpMode {
 
         spoolRightMotor.setTargetPosition(MIN_SPOOL_POSITION);
         spoolRightMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        spoolRightMotor.setPower(1);
+        spoolRightMotor.setPower(0.01);
+
+        // PID Setup
+        PIDController controller;
+        double p = 0.004, i = 0.2, d = 0.02;
+
+        controller = new PIDController(p, i ,d);
 
         // Yield until the program starts.
         waitForStart();
@@ -134,6 +135,42 @@ public class DriveTeleOp extends LinearOpMode {
             } else if (!gamepad1.a && pressADebounce) {
                 pressADebounce = false;
             }
+
+            // --------------------------------------------------------------------
+
+            // Arm Information
+            //
+            // The servo still tweaks out a bit when going to it's position
+            // but I guess it's fine?
+            //
+            // Too bad that PIDs don't work/exist for Servos... or do they...?
+
+            // manual
+            if (gamepad1.right_bumper) {
+                if ((currentArmPosition + ARM_INCREMENT) >= MAX_ARM_POSITION) {
+                    currentArmPosition = MAX_ARM_POSITION;
+                } else {
+                    currentArmPosition += ARM_INCREMENT;
+                }
+            } else if (gamepad1.left_bumper) {
+                if ((currentArmPosition - ARM_INCREMENT) <= MIN_ARM_POSITION) {
+                    currentArmPosition = MIN_ARM_POSITION;
+                } else {
+                    currentArmPosition -= ARM_INCREMENT;
+                }
+            }
+
+            // shortcuts
+            if (gamepad1.dpad_up) {
+                currentArmPosition = ARM_DROP_POSITION;
+            } else if (gamepad1.dpad_left) {
+                currentArmPosition = ARM_GRAB_POSITION;
+            } else if (gamepad1.dpad_right) {
+                currentArmPosition = MIN_ARM_POSITION;
+            }
+
+            armRightServo.setPosition(currentArmPosition);
+            armLeftServo.setPosition(currentArmPosition);
 
             // --------------------------------------------------------------------
 
@@ -188,42 +225,6 @@ public class DriveTeleOp extends LinearOpMode {
 
             spoolRightMotor.setPower(controller.calculate(spoolRightMotor.getCurrentPosition(), currentSpoolPosition));
             spoolRightMotor.setTargetPosition(currentSpoolPosition);
-
-            // --------------------------------------------------------------------
-
-            // Arm Information
-            //
-            // The servo still tweaks out a bit when going to it's position
-            // but I guess it's fine?
-            //
-            // Too bad that PIDs don't work/exist for Servos... or do they...?
-
-            // manual
-            if (gamepad1.right_bumper) {
-                if ((currentArmPosition + ARM_INCREMENT) >= MAX_ARM_POSITION) {
-                    currentArmPosition = MAX_ARM_POSITION;
-                } else {
-                    currentArmPosition += ARM_INCREMENT;
-                }
-            } else if (gamepad1.left_bumper) {
-                if ((currentArmPosition - ARM_INCREMENT) <= MIN_ARM_POSITION) {
-                    currentArmPosition = MIN_ARM_POSITION;
-                } else {
-                    currentArmPosition -= ARM_INCREMENT;
-                }
-            }
-
-            // shortcuts
-            if (gamepad1.dpad_up) {
-                currentArmPosition = MID_ARM_POSITION;
-            } else if (gamepad1.dpad_left) {
-                currentArmPosition = MAX_ARM_POSITION;
-            } else if (gamepad1.dpad_right) {
-                currentArmPosition = MIN_ARM_POSITION;
-            }
-
-            armRightServo.setPosition(currentArmPosition);
-            armLeftServo.setPosition(currentArmPosition);
 
             // --------------------------------------------------------------------
 
