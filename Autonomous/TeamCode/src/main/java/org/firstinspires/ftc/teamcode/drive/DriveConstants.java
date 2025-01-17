@@ -9,20 +9,21 @@ import com.qualcomm.robotcore.hardware.PIDFCoefficients;
  *
  * TODO: Tune or adjust the following constants to fit your robot. Note that the non-final
  * fields may also be edited through the dashboard (connect to the robot's WiFi network and
- * navigate to https://192.168.49.1:8080/dash). Make sure to save the values here after you
+ * navigate to https://192.168.43.1:8080/dash). Make sure to save the values here after you
  * adjust them in the dashboard; **config variable changes don't persist between app restarts**.
  *
  * These are not the only parameters; some are located in the localizer classes, drive base classes,
  * and op modes themselves.
  */
+
 @Config
 public class DriveConstants {
 
     /*
      * These are motor constants that should be listed online for your motors.
      */
-    public static final double TICKS_PER_REV = 1;
-    public static final double MAX_RPM = 1;
+    public static final double TICKS_PER_REV = 537.6;
+    public static final double MAX_RPM = 312.5;
 
     /*
      * Set RUN_USING_ENCODER to true to enable built-in hub velocity control using drive encoders.
@@ -32,7 +33,7 @@ public class DriveConstants {
      * If using the built-in motor velocity PID, update MOTOR_VELO_PID with the tuned coefficients
      * from DriveVelocityPIDTuner.
      */
-    public static final boolean RUN_USING_ENCODER = false;
+    public static final boolean RUN_USING_ENCODER = true;
     public static PIDFCoefficients MOTOR_VELO_PID = new PIDFCoefficients(0, 0, 0,
             getMotorVelocityF(MAX_RPM / 60 * TICKS_PER_REV));
 
@@ -44,9 +45,9 @@ public class DriveConstants {
      * angular distances although most angular parameters are wrapped in Math.toRadians() for
      * convenience. Make sure to exclude any gear ratio included in MOTOR_CONFIG from GEAR_RATIO.
      */
-    public static double WHEEL_RADIUS = 2; // in
+    public static double WHEEL_RADIUS = 1.8898; // in
     public static double GEAR_RATIO = 1; // output (wheel) speed / input (motor) speed
-    public static double TRACK_WIDTH = 1; // in
+    public static double TRACK_WIDTH = 13; // in
 
     /*
      * These are the feedforward parameters used to model the drive motor behavior. If you are using
@@ -65,18 +66,18 @@ public class DriveConstants {
      * small and gradually increase them later after everything is working. All distance units are
      * inches.
      */
-    public static double MAX_VEL = 30;
-    public static double MAX_ACCEL = 30;
-    public static double MAX_ANG_VEL = Math.toRadians(60);
-    public static double MAX_ANG_ACCEL = Math.toRadians(60);
+    public static double MAX_VEL = 52.56702632542596;
+    public static double MAX_ACCEL = 52.56702632542596;
+    public static double MAX_ANG_VEL = Math.toRadians(231.6822115384615);
+    public static double MAX_ANG_ACCEL = Math.toRadians(231.6822115384615);
 
     /*
      * Adjust the orientations here to match your robot. See the FTC SDK documentation for details.
      */
     public static RevHubOrientationOnRobot.LogoFacingDirection LOGO_FACING_DIR =
-            RevHubOrientationOnRobot.LogoFacingDirection.UP;
+            RevHubOrientationOnRobot.LogoFacingDirection.LEFT;
     public static RevHubOrientationOnRobot.UsbFacingDirection USB_FACING_DIR =
-            RevHubOrientationOnRobot.UsbFacingDirection.FORWARD;
+            RevHubOrientationOnRobot.UsbFacingDirection.UP;
 
 
     public static double encoderTicksToInches(double ticks) {

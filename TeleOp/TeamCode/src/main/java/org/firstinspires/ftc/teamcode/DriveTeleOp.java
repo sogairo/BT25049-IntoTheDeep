@@ -15,7 +15,7 @@ public class DriveTeleOp extends LinearOpMode {
     @Override
     public void runOpMode() throws InterruptedException {
         // Initialize Constants
-        final double DRIVE_POWER_CONSTRAINT = 0.8;
+        final double DRIVE_POWER_CONSTRAINT = 0.85;
 
         final int MAX_SPOOL_POSITION = 1610;
         final int MIN_SPOOL_POSITION = 0;
@@ -23,11 +23,15 @@ public class DriveTeleOp extends LinearOpMode {
         final int SAMPLE_BASKET_POSITION = 1610;
         final int SPECIMEN_POSITION = 415;
 
-        final double MAX_ARM_POSITION = 0.96;
+        final double MAX_ARM_POSITION = 0.975;
         final double MIN_ARM_POSITION = 0;
-        final double ARM_DROP_POSITION = 0.4;
-        final double ARM_GRAB_POSITION = 0.9;
+        final double ARM_SAMPLE_POSITION = 0.5;
+        final double ARM_SPECIMEN_POSITION = 0.48;
+        final double ARM_GRAB_POSITION = 0.875;
         final double ARM_INCREMENT = 0.02;
+
+        final double MIN_CLAW_POSITION = 0.455;
+        final double MAX_CLAW_POSITION = 0.625;
 
         // Initialize Variables.
         int currentSpoolPosition = MIN_SPOOL_POSITION;
@@ -52,6 +56,7 @@ public class DriveTeleOp extends LinearOpMode {
 
         // Claw Configuration.
         Servo remadeClawServo = hardwareMap.servo.get("remadeClaw");
+        remadeClawServo.scaleRange(MIN_CLAW_POSITION, MAX_CLAW_POSITION);
         remadeClawServo.setPosition(1);
 
         // Claw Pivot Configuration.
@@ -59,15 +64,22 @@ public class DriveTeleOp extends LinearOpMode {
         clawPivot.setPosition(1);
 
         // Arm Configuration.
-        Servo armRightServo = hardwareMap.servo.get("armRight");
+
+        /*
+
+        NOT USING THIS AXON SERVO
+
+        Servo armRightServo = hardwareMap.servo.get("armRight"); // 3
         armRightServo.setDirection(Servo.Direction.REVERSE);
         armRightServo.setPosition(currentArmPosition);
 
-        Servo armLeftServo = hardwareMap.servo.get("armLeft");
+         */
+
+        Servo armLeftServo = hardwareMap.servo.get("armLeft"); // 2
         armLeftServo.setPosition(currentArmPosition);
 
         // Spool Linear Slides Configuration.
-        DcMotor spoolLeftMotor = hardwareMap.dcMotor.get("spoolLeft");
+        DcMotor spoolLeftMotor = hardwareMap.dcMotor.get("spoolLeft"); // 0
         spoolLeftMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 
         spoolLeftMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
@@ -77,7 +89,7 @@ public class DriveTeleOp extends LinearOpMode {
         spoolLeftMotor.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         spoolLeftMotor.setPower(0.01);
 
-        DcMotor spoolRightMotor = hardwareMap.dcMotor.get("spoolRight");
+        DcMotor spoolRightMotor = hardwareMap.dcMotor.get("spoolRight"); // 1
         spoolRightMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 
         spoolRightMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
@@ -162,14 +174,18 @@ public class DriveTeleOp extends LinearOpMode {
 
             // shortcuts
             if (gamepad1.dpad_up) {
-                currentArmPosition = ARM_DROP_POSITION;
+                if (setPositionType == SPECIMEN_POSITION) {
+                    currentArmPosition = ARM_SPECIMEN_POSITION;
+                } else {
+                    currentArmPosition = ARM_SAMPLE_POSITION;
+                }
             } else if (gamepad1.dpad_left) {
                 currentArmPosition = ARM_GRAB_POSITION;
             } else if (gamepad1.dpad_right) {
                 currentArmPosition = MIN_ARM_POSITION;
             }
 
-            armRightServo.setPosition(currentArmPosition);
+            //armRightServo.setPosition(currentArmPosition);
             armLeftServo.setPosition(currentArmPosition);
 
             // --------------------------------------------------------------------
@@ -220,11 +236,13 @@ public class DriveTeleOp extends LinearOpMode {
                 pressYDebounce = false;
             }
 
-            spoolLeftMotor.setPower(controller.calculate(spoolLeftMotor.getCurrentPosition(), currentSpoolPosition));
             spoolLeftMotor.setTargetPosition(currentSpoolPosition);
-
-            spoolRightMotor.setPower(controller.calculate(spoolRightMotor.getCurrentPosition(), currentSpoolPosition));
             spoolRightMotor.setTargetPosition(currentSpoolPosition);
+
+            double power = controller.calculate(spoolLeftMotor.getCurrentPosition(), currentSpoolPosition);
+
+            spoolRightMotor.setPower(power);
+            spoolLeftMotor.setPower(power);
 
             // --------------------------------------------------------------------
 
@@ -254,6 +272,7 @@ public class DriveTeleOp extends LinearOpMode {
             //
             // Outputs the data of each variable
 
+            /*
             telemetry.addData("GamepadX", gamepad1.x);
             telemetry.addData("Opened", remadeClawServo.getPosition() == 0);
             telemetry.addData("Position", remadeClawServo.getPosition());
@@ -265,17 +284,25 @@ public class DriveTeleOp extends LinearOpMode {
             telemetry.addData("Servo2 Position", armLeftServo.getPosition());
             telemetry.addData("Servo3 Position", armRightServo.getPosition());
             telemetry.addData("------------", "------------");
+             */
 
             if (setPositionType == SPECIMEN_POSITION) {
                 telemetry.addData("Toggled State", "SPECIMEN");
             } else {
                 telemetry.addData("Toggled State", "SAMPLE");
             }
+
+            /*
             telemetry.addData("RightTrigger", gamepad1.right_trigger > 0);
             telemetry.addData("LeftTrigger", gamepad1.left_trigger > 0);
+            */
             telemetry.addData("currentSpoolPosition", currentSpoolPosition);
             telemetry.addData("Motor0 Position", spoolLeftMotor.getCurrentPosition());
             telemetry.addData("Motor1 Position", spoolRightMotor.getCurrentPosition());
+            telemetry.addData("------------", "------------");
+
+            telemetry.addData("Motor0 PID", controller.calculate(spoolLeftMotor.getCurrentPosition(), currentSpoolPosition));
+            telemetry.addData("Motor1 PID", controller.calculate(spoolRightMotor.getCurrentPosition(), currentSpoolPosition));
 
             telemetry.update();
         }
