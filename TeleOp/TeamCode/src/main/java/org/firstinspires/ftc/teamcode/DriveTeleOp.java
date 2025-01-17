@@ -23,11 +23,11 @@ public class DriveTeleOp extends LinearOpMode {
         final int SAMPLE_BASKET_POSITION = 1610;
         final int SPECIMEN_POSITION = 415;
 
-        final double MAX_ARM_POSITION = 0.975;
+        final double MAX_ARM_POSITION = 0.985;
         final double MIN_ARM_POSITION = 0;
         final double ARM_SAMPLE_POSITION = 0.5;
         final double ARM_SPECIMEN_POSITION = 0.48;
-        final double ARM_GRAB_POSITION = 0.875;
+        final double ARM_GRAB_POSITION = 0.92;
         final double ARM_INCREMENT = 0.02;
 
         final double MIN_CLAW_POSITION = 0.455;
