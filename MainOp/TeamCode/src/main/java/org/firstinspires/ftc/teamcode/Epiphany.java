@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode;
 
+import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.config.Config;
 
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
@@ -8,7 +9,6 @@ import com.arcrobotics.ftclib.controller.PIDFController;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
-import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
@@ -20,12 +20,13 @@ public class Epiphany extends LinearOpMode {
     // Initialize Constants
     // ------------------------------------------------ //
     public static class Configuration {
-        public double DRIVE_POWER_CONSTRAINT = 0.85;
+        public double DRIVE_POWER_CONSTRAINT = 0.8;
+        public double SPOOL_ASCENT_CONSTRAINT = 0.6;
 
         public int MAX_SPOOL_POSITION = 1610;
         public int MIN_SPOOL_POSITION = 0;
         public int SPOOL_INCREMENT = 30;
-        public int SPOOL_POSITION_TOLERANCE = 5;
+        public int SPOOL_POSITION_TOLERANCE = 15;
         public int SAMPLE_BASKET_POSITION = 1610;
         public int SPECIMEN_POSITION = 415;
 
@@ -34,7 +35,7 @@ public class Epiphany extends LinearOpMode {
         public double ARM_SAMPLE_POSITION = 0.5;
         public double ARM_SPECIMEN_POSITION = 0.48;
         public double ARM_GRAB_POSITION = 0.92;
-        public double ARM_INCREMENT = 0.02;
+        public double ARM_INCREMENT = 0.04;
 
         public double MIN_CLAW_POSITION = 0.455;
         public double MAX_CLAW_POSITION = 0.625;
@@ -42,10 +43,10 @@ public class Epiphany extends LinearOpMode {
 
     public static Epiphany.Configuration Params = new Epiphany.Configuration();
 
-    public final DcMotorEx topLeft, bottomLeft, bottomRight, topRight;
-    public final DcMotorEx spoolLeft, spoolRight;
+    public DcMotorEx topLeft, bottomLeft, bottomRight, topRight;
+    public DcMotorEx spoolLeft, spoolRight;
 
-    public final Servo claw, pivot, armLeft, armRight;
+    public Servo claw, pivot, armLeft, armRight;
 
     // Initialize Variables.
     // ------------------------------------------------ //
@@ -62,18 +63,19 @@ public class Epiphany extends LinearOpMode {
     // Set up PIDF Configuration
     // ------------------------------------------------ //
     public static class PIDFConfiguration {
-        public double kP = 0;
-        public double kI = 0;
-        public double kD = 0;
-        public double kF = 0;
+        public double kP = 0.025;
+        public double kI = 0.01;
+        public double kD = 0; // NEVER TUNE D
+        public double kF = 0.00001;
     }
 
+    private final FtcDashboard dashboard =  FtcDashboard.getInstance();
     public static Epiphany.PIDFConfiguration PIDFParams = new Epiphany.PIDFConfiguration();
     private PIDFController controller;
 
     // Retrieve hardwareMap devices
     // ------------------------------------------------ //
-    public Epiphany(HardwareMap hardwareMap) {
+    public void INITALIZE_HARDWARE() {
         // Drivetrain
         // ------------------------------------------------ //
         topLeft = hardwareMap.get(DcMotorEx.class, "topLeft");
@@ -221,6 +223,11 @@ public class Epiphany extends LinearOpMode {
             pressYDebounce = true;
             if (currentSpoolPosition != setPositionType) {
                 currentSpoolPosition = setPositionType;
+                if (setPositionType == Params.SPECIMEN_POSITION) {
+                    currentArmPosition = Params.ARM_SPECIMEN_POSITION;
+                } else {
+                    currentArmPosition = Params.ARM_SAMPLE_POSITION;
+                }
             } else {
                 currentSpoolPosition = Params.MIN_SPOOL_POSITION;
             }
@@ -231,21 +238,16 @@ public class Epiphany extends LinearOpMode {
         spoolLeft.setTargetPosition(currentSpoolPosition);
         spoolRight.setTargetPosition(currentSpoolPosition);
 
-        spoolLeft.setPower(controller.calculate(spoolLeft.getCurrentPosition(), currentSpoolPosition));
-        spoolRight.setPower(controller.calculate(spoolRight.getCurrentPosition(), currentSpoolPosition));
+        spoolLeft.setPower(Math.min(controller.calculate(spoolLeft.getCurrentPosition(), currentSpoolPosition), Params.SPOOL_ASCENT_CONSTRAINT));
+        spoolRight.setPower(Math.min(controller.calculate(spoolRight.getCurrentPosition(), currentSpoolPosition), Params.SPOOL_ASCENT_CONSTRAINT));
     }
 
     @Override
     public void runOpMode() throws InterruptedException {
-        Epiphany drive = new Epiphany(hardwareMap);
+        INITALIZE_HARDWARE();
 
         TelemetryPacket packet = new TelemetryPacket();
         controller = new PIDFController(PIDFParams.kP, PIDFParams.kI, PIDFParams.kD, PIDFParams.kF);
-
-        /*
-            packet.put("x", 3.7);
-            packet.put("status", "alive");
-        */
 
         waitForStart();
         if (isStopRequested()) return;
@@ -272,6 +274,22 @@ public class Epiphany extends LinearOpMode {
             bottomLeft.setPower(bottomLeftPower);
             topRight.setPower(topRightPower);
             bottomRight.setPower(bottomRightPower);
+
+            // Telemetry
+            // ------------------------------------------------ //
+            telemetry.addData("Left 0 PID:", Math.min(controller.calculate(spoolLeft.getCurrentPosition(), currentSpoolPosition), Params.SPOOL_ASCENT_CONSTRAINT));
+            telemetry.addData("Right 1 PID:", Math.min(controller.calculate(spoolRight.getCurrentPosition(), currentSpoolPosition), Params.SPOOL_ASCENT_CONSTRAINT));
+
+            telemetry.update();
+
+            // Dashboard Packets
+            // ------------------------------------------------ //
+            packet.put("targetPosition", currentSpoolPosition);
+
+            packet.put("Left 0", spoolLeft.getCurrentPosition());
+            packet.put("Right 1", spoolRight.getCurrentPosition());
+
+            dashboard.sendTelemetryPacket(packet);
         }
     }
 }
