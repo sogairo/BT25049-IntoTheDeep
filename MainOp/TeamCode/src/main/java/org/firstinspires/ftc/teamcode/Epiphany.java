@@ -21,9 +21,9 @@ public class Epiphany extends LinearOpMode {
     // ------------------------------------------------ //
     public static class Configuration {
         public double DRIVE_POWER_CONSTRAINT = 0.8;
-        public double SPOOL_ASCENT_CONSTRAINT = 0.6;
+        public double SPOOL_ASCENT_CONSTRAINT = 0.7;
 
-        public int MAX_SPOOL_POSITION = 1610;
+        public int MAX_SPOOL_POSITION = 2000;
         public int MIN_SPOOL_POSITION = 0;
         public int SPOOL_INCREMENT = 30;
         public int SPOOL_POSITION_TOLERANCE = 15;
