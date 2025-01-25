@@ -6,6 +6,7 @@ import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.acmerobotics.roadrunner.Action;
 import com.acmerobotics.roadrunner.ParallelAction;
 import com.acmerobotics.roadrunner.Pose2d;
+import com.acmerobotics.roadrunner.SequentialAction;
 import com.acmerobotics.roadrunner.Vector2d;
 import com.acmerobotics.roadrunner.ftc.Actions;
 
@@ -37,64 +38,39 @@ public class Eureka extends LinearOpMode {
     public static int currentSpoolPosition = Params.MIN_SPOOL_POSITION;
     private static final int setPositionType = Params.SPECIMEN_POSITION;
 
-    // Main OpMode
+    // Create Actions for Objects
     // ------------------------------------------------ //
-    @Override
-    public void runOpMode() throws InterruptedException {
-        MecanumDrive drive = new MecanumDrive(hardwareMap, new Pose2d(0, 0, 0));
-
-        Claw clawServo = new Claw(hardwareMap);
-        LinearSlides linearSlides = new LinearSlides(hardwareMap);
-        Arm arm = new Arm(hardwareMap);
-
-        waitForStart();
-
-        Actions.runBlocking(
-                drive.actionBuilder(new Pose2d(61.5, 0, 0))
-                        .strafeTo(new Vector2d(33, 0))
-                        .waitSeconds(1)
-                        .stopAndAdd(arm.activateArm())
-                        .stopAndAdd(linearSlides.activateSlides())
-                        .waitSeconds(1)
-                        .stopAndAdd(linearSlides.activateSlides())
-                        .stopAndAdd(clawServo.activateClaw())
-                        .waitSeconds(2)
-                        .build());
-                /*
-                new ParallelAction(
-                        drive.actionBuilder(new Pose2d(0, 0, 0))
-                                .stopAndAdd(arm.activateArm())
-                                .stopAndAdd(linearSlides.activateSlides())
-                                .build());
-
-
-                 */
-    }
-
     public static class Claw {
         private final Servo clawServo;
 
         public Claw(HardwareMap hardwareMap) {
             clawServo = hardwareMap.get(Servo.class, "claw");
             clawServo.scaleRange(Params.MIN_CLAW_POSITION, Params.MAX_CLAW_POSITION);
-            clawServo.setPosition(0);
+            //clawServo.setPosition(0);
         }
 
-        // It works but you need to wait secords until it does work...
-        public class ClawFunction implements Action {
+        public class CloseClaw implements Action {
             @Override
             public boolean run(@NonNull TelemetryPacket packet) {
-                if (clawServo.getPosition() == 0) {
-                    clawServo.setPosition(1);
-                } else {
-                    clawServo.setPosition(0);
-                }
+                clawServo.setPosition(0);
                 return false;
             }
         }
 
-        public Action activateClaw() {
-            return new ClawFunction();
+        public Action closeClaw() {
+            return new CloseClaw();
+        }
+
+        public class OpenClaw implements Action {
+            @Override
+            public boolean run(@NonNull TelemetryPacket packet) {
+                clawServo.setPosition(1);
+                return false;
+            }
+        }
+
+        public Action openClaw() {
+            return new OpenClaw();
         }
     }
 
@@ -103,11 +79,10 @@ public class Eureka extends LinearOpMode {
 
         public Arm(HardwareMap hardwareMap) {
             armServo = hardwareMap.get(Servo.class, "armLeft");
-            armServo.setPosition(Params.MIN_ARM_POSITION);
+            //armServo.setPosition(Params.MIN_ARM_POSITION);
         }
 
-        // It works but you need to wait secords until it does work...
-        public class ArmFunction implements Action {
+        public class RaiseArm implements Action {
             @Override
             public boolean run(@NonNull TelemetryPacket packet) {
                 armServo.setPosition(Params.ARM_SPECIMEN_POSITION);
@@ -115,8 +90,20 @@ public class Eureka extends LinearOpMode {
             }
         }
 
-        public Action activateArm() {
-            return new ArmFunction();
+        public Action raiseArm() {
+            return new RaiseArm();
+        }
+
+        public class LowerArm implements Action {
+            @Override
+            public boolean run(@NonNull TelemetryPacket packet) {
+                armServo.setPosition(Params.MIN_ARM_POSITION);
+                return false;
+            }
+        }
+
+        public Action lowerArm() {
+            return new LowerArm();
         }
     }
 
@@ -144,18 +131,13 @@ public class Eureka extends LinearOpMode {
             spoolRight.setPower(0.01);
         }
 
-        // It works but you need to wait secords until it does work...
-        public class LinearSlideFunction implements Action {
+        public class RaiseSlides implements Action {
             private boolean initialized = false;
 
             @Override
             public boolean run(@NonNull TelemetryPacket packet) {
                 if (!initialized) {
-                    if (currentSpoolPosition != setPositionType) {
-                        currentSpoolPosition = setPositionType;
-                    } else {
-                        currentSpoolPosition = Params.MIN_SPOOL_POSITION;
-                    }
+                    currentSpoolPosition = Params.SPECIMEN_POSITION;
                     initialized = true;
                 }
 
@@ -172,8 +154,77 @@ public class Eureka extends LinearOpMode {
             }
         }
 
-        public Action activateSlides() {
-            return new LinearSlideFunction();
+        public Action raiseSlides() {
+            return new RaiseSlides();
         }
+
+        public class LowerSlides implements Action {
+            private boolean initialized = false;
+
+            @Override
+            public boolean run(@NonNull TelemetryPacket packet) {
+                if (!initialized) {
+                    currentSpoolPosition = Params.MIN_SPOOL_POSITION;
+                    initialized = true;
+                }
+
+                controller.setPIDF(PIDFParams.kP, PIDFParams.kI, PIDFParams.kD, PIDFParams.kF);
+
+                spoolLeft.setTargetPosition(currentSpoolPosition);
+                spoolRight.setTargetPosition(currentSpoolPosition);
+
+                spoolLeft.setPower(Math.min(controller.calculate(spoolLeft.getCurrentPosition(), currentSpoolPosition), Params.SPOOL_ASCENT_CONSTRAINT));
+                spoolRight.setPower(Math.min(controller.calculate(spoolRight.getCurrentPosition(), currentSpoolPosition), Params.SPOOL_ASCENT_CONSTRAINT));
+
+                return ((spoolLeft.getCurrentPosition() >= (currentSpoolPosition - Params.SPOOL_POSITION_TOLERANCE)) &&
+                        (spoolRight.getCurrentPosition() >= (currentSpoolPosition - Params.SPOOL_POSITION_TOLERANCE)));
+            }
+        }
+
+        public Action lowerSlides() {
+            return new LowerSlides();
+        }
+    }
+
+    // Main OpMode
+    // ------------------------------------------------ //
+    @Override
+    public void runOpMode() throws InterruptedException {
+        Pose2d initalStartingPose = new Pose2d(0, 0, 0);
+        MecanumDrive drive = new MecanumDrive(hardwareMap, initalStartingPose);
+
+        Claw claw = new Claw(hardwareMap);
+        LinearSlides linearSlides = new LinearSlides(hardwareMap);
+        Arm arm = new Arm(hardwareMap);
+
+        // Develop Paths
+        Action hangPreloadSpecimen = drive.actionBuilder(initalStartingPose)
+                .strafeTo(new Vector2d(33, 0))
+                .build();
+
+        Action simultaneousHang = drive.actionBuilder(initalStartingPose)
+                .waitSeconds(0.25)
+                .stopAndAdd(claw.openClaw())
+                .build();
+
+        waitForStart();
+
+        Actions.runBlocking(new SequentialAction(
+                        // raise arm + slides while going to specimen bar
+                        new ParallelAction(
+                                arm.raiseArm(),
+                                linearSlides.raiseSlides()
+                        ),
+                        hangPreloadSpecimen,
+
+                        // hang
+                        new ParallelAction(
+                                linearSlides.lowerSlides(),
+                                simultaneousHang
+                        )
+
+
+                )
+        );
     }
 }
