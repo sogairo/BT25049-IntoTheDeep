@@ -21,55 +21,41 @@ public class Meep {
                 // put on specimen
                 .lineToY(33)
 
-                                .strafeTo(new Vector2d(-48.1, 39))
-                .strafeTo(new Vector2d(-58.5, 39))
+                // grab spec 1
+                .strafeTo(new Vector2d(-15, 35))
+                .lineToX(-48)
 
-                /*
-                // push first sample
-                .setTangent(Math.toRadians(180))
-                .lineToX(-10)
-
-                .splineTo(new Vector2d(-48, 14), Math.toRadians(-180))
-
+                // deposit
                 .setTangent(Math.toRadians(90))
-                .lineToY(50)
-                .lineToY(14)
+                .lineToYLinearHeading(50, Math.toRadians(90))
 
-                // push second sample
-                .setTangent(Math.toRadians(180))
-                .lineToX(-58)
+                // grab spec 2
+                .strafeToLinearHeading(new Vector2d(-58.5, 39), Math.toRadians(-90))
 
+                // deposit
                 .setTangent(Math.toRadians(90))
-                .lineToY(50)
-                .lineToY(14)
+                .lineToYLinearHeading(50, Math.toRadians(90))
 
-                // push third sample
-                .setTangent(Math.toRadians(180))
-                .lineToX(-61)
+                // go grab specimen
+                .setTangent(Math.toRadians(0))
+                .lineToX(-40)
+                .strafeToLinearHeading(new Vector2d(-32.5, 61.5), Math.toRadians(180))
 
-                .setTangent(Math.toRadians(90))
-                .lineToY(50)
-                 */
+                // put specimen on bar
+                .strafeToLinearHeading(new Vector2d(0, 33), Math.toRadians(-90))
 
-                // get into dropping position
-                .setTangent(Math.toRadians(180))
-                .strafeTo(new Vector2d(-25, 61))
-                .turn(Math.toRadians(-90))
+                // go back
+                .strafeToLinearHeading(new Vector2d(-32.5, 61.5), Math.toRadians(180))
 
-                // the hang 1
-                .strafeToLinearHeading(new Vector2d(-3, 35), Math.toRadians(270))
+                // put specimen on bar
+                .strafeToLinearHeading(new Vector2d(0, 33), Math.toRadians(-90))
 
-                // back
-                .strafeToLinearHeading(new Vector2d(-25, 61), Math.toRadians(180))
-
-                // hang 2
-                .strafeToLinearHeading(new Vector2d(-2, 35), Math.toRadians(270))
-
-                // back
-                .strafeToLinearHeading(new Vector2d(-25, 61), Math.toRadians(180))
-
-                // hang 3
-                .strafeToLinearHeading(new Vector2d(-1, 35), Math.toRadians(270))
+                // ascent
+                .strafeToLinearHeading(new Vector2d(-40, 50), Math.toRadians(0))
+                .setTangent(Math.toRadians(-90))
+                .lineToY(10)
+                .setTangent(Math.toRadians(0))
+                .lineToX(-24)
 
                 .build());
 

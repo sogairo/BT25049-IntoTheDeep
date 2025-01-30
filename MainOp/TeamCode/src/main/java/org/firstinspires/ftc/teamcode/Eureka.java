@@ -82,7 +82,7 @@ public class Eureka extends LinearOpMode {
             armServo.setPosition(Params.MIN_ARM_POSITION);
         }
 
-        public class RaiseArm implements Action {
+        public class HangSpecimen implements Action {
             @Override
             public boolean run(@NonNull TelemetryPacket packet) {
                 armServo.setPosition(Params.ARM_SPECIMEN_POSITION);
@@ -90,11 +90,35 @@ public class Eureka extends LinearOpMode {
             }
         }
 
-        public Action raiseArm() {
-            return new RaiseArm();
+        public Action hangSpecimen() {
+            return new HangSpecimen();
+        }
+
+        public class GrabSample implements Action {
+            @Override
+            public boolean run(@NonNull TelemetryPacket packet) {
+                armServo.setPosition(Params.ARM_GRAB_POSITION);
+                return false;
+            }
+        }
+
+        public Action grabSample() {
+            return new GrabSample();
         }
 
         public class LowerArm implements Action {
+            @Override
+            public boolean run(@NonNull TelemetryPacket packet) {
+                armServo.setPosition(Params.MAX_ARM_POSITION);
+                return false;
+            }
+        }
+
+        public Action lowerArm() {
+            return new LowerArm();
+        }
+
+        public class ResetArm implements Action {
             @Override
             public boolean run(@NonNull TelemetryPacket packet) {
                 armServo.setPosition(Params.MIN_ARM_POSITION);
@@ -102,8 +126,8 @@ public class Eureka extends LinearOpMode {
             }
         }
 
-        public Action lowerArm() {
-            return new LowerArm();
+        public Action resetArm() {
+            return new ResetArm();
         }
     }
 
@@ -197,16 +221,44 @@ public class Eureka extends LinearOpMode {
         LinearSlides linearSlides = new LinearSlides(hardwareMap);
         Arm arm = new Arm(hardwareMap);
 
-        // Develop Paths
         Action hangPreloadSpecimen = drive.actionBuilder(initalStartingPose)
-                .lineToY(25)
+                .lineToY(33)
                 .build();
 
-        Action grabFirstSample = drive.actionBuilder(new Pose2d(0, 25,  Math.toRadians(-90)))
-                //.setTangent(Math.toRadians(180))
-                .strafeTo(new Vector2d(-48.1, 39))
-                .strafeTo(new Vector2d(-58.5, 39))
-                //.splineTo(new Vector2d(-48, 14), Math.toRadians(-180))
+        Action grabFirstSample = drive.actionBuilder(new Pose2d(0, 33,  Math.toRadians(-90)))
+                .strafeTo(new Vector2d(-15, 35))
+                .lineToX(-48)
+                .build();
+
+        Action grabSecondSample = drive.actionBuilder(new Pose2d(-48, 50,  Math.toRadians(90)))
+                .strafeToLinearHeading(new Vector2d(-58.5, 39), Math.toRadians(-90))
+                .build();
+
+        Action depositSample = drive.actionBuilder(initalStartingPose)
+                .setTangent(Math.toRadians(90))
+                .lineToYLinearHeading(50, Math.toRadians(90))
+                .build();
+
+        Action initializeFactory = drive.actionBuilder(new Pose2d(-58.5, 50,  Math.toRadians(90)))
+                .setTangent(Math.toRadians(0))
+                .lineToX(-40)
+                .strafeToLinearHeading(new Vector2d(-32.5, 61.5), Math.toRadians(180))
+                .build();
+
+        Action hangLoadedSpecimen = drive.actionBuilder(new Pose2d(-32.5, 61.5,  Math.toRadians(180))) // fix pose
+                .strafeToLinearHeading(new Vector2d(0, 33), Math.toRadians(-90))
+                .build();
+
+        Action returnToFactory = drive.actionBuilder(new Pose2d(0, 33,  Math.toRadians(-90)))
+                .strafeToLinearHeading(new Vector2d(-32.5, 61.5), Math.toRadians(180))
+                .build();
+
+        Action ascendSubmersible = drive.actionBuilder(new Pose2d(0, 33,  Math.toRadians(-90)))
+                .strafeToLinearHeading(new Vector2d(-40, 50), Math.toRadians(0))
+                .setTangent(Math.toRadians(-90))
+                .lineToY(10)
+                .setTangent(Math.toRadians(0))
+                .lineToX(-24)
                 .build();
 
         Action simultaneousHang = drive.actionBuilder(initalStartingPose)
@@ -214,27 +266,98 @@ public class Eureka extends LinearOpMode {
                 .stopAndAdd(claw.openClaw())
                 .build();
 
+        Action simultaneousGrab = drive.actionBuilder(initalStartingPose)
+                .stopAndAdd(arm.lowerArm())
+                .stopAndAdd(claw.closeClaw())
+                .build();
+
         waitForStart();
 
         Actions.runBlocking(new SequentialAction(
                         // raise arm + slides while going to specimen bar
                         new ParallelAction(
-                                arm.raiseArm(),
-                                linearSlides.raiseSlides()
+                                arm.hangSpecimen(),
+                                linearSlides.raiseSlides(),
+                                hangPreloadSpecimen
                         ),
-                        hangPreloadSpecimen,
 
                         // hang
                         new ParallelAction(
-                                linearSlides.lowerSlides()
+                                linearSlides.lowerSlides(),
+                                simultaneousHang
                         ),
-                        simultaneousHang,
+                        arm.resetArm(),
 
-                        new ParallelAction(
-                                arm.lowerArm()
-                        ),
                         // go to first sample
-                        grabFirstSample
+                        new ParallelAction(
+                                grabFirstSample,
+                                arm.grabSample()
+                        ),
+                        arm.lowerArm(),
+                        claw.closeClaw(),
+
+                        depositSample,
+                        claw.openClaw(),
+
+                        // go to second sample
+                        new ParallelAction(
+                                grabSecondSample,
+                                arm.grabSample()
+                        ),
+                        arm.lowerArm(),
+                        claw.closeClaw(),
+
+                        depositSample,
+                        claw.openClaw(),
+
+                        // initialize factory
+                        new ParallelAction(
+                                initializeFactory,
+                                arm.grabSample()
+                        ),
+                        arm.lowerArm(),
+                        claw.closeClaw(),
+
+                        // get in specimen hanging pos
+                        new ParallelAction(
+                                arm.hangSpecimen(),
+                                linearSlides.raiseSlides(),
+                                hangLoadedSpecimen
+                        ),
+
+                        // hang it
+                        new ParallelAction(
+                                linearSlides.lowerSlides(),
+                                simultaneousHang
+                        ),
+
+                        // return
+                        new ParallelAction(
+                                returnToFactory,
+                                arm.grabSample()
+                        ),
+
+                        // get in specimen hanging pos
+                        new ParallelAction(
+                                arm.hangSpecimen(),
+                                linearSlides.raiseSlides(),
+                                hangLoadedSpecimen
+                        ),
+
+                        // hang it
+                        new ParallelAction(
+                                linearSlides.lowerSlides(),
+                                simultaneousHang
+                        ),
+                        arm.resetArm(),
+
+                        // ascend
+                        new ParallelAction(
+                                linearSlides.raiseSlides(),
+                                arm.hangSpecimen(),
+                                ascendSubmersible
+                        ),
+                        arm.grabSample()
                 )
         );
     }
