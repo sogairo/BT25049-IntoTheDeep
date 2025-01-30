@@ -19,8 +19,12 @@ public class Meep {
         // actual path
         myBot.runAction(myBot.getDrive().actionBuilder(new Pose2d(0, 61.5, Math.toRadians(-90)))
                 // put on specimen
-                .lineToY(35)
+                .lineToY(33)
 
+                                .strafeTo(new Vector2d(-48.1, 39))
+                .strafeTo(new Vector2d(-58.5, 39))
+
+                /*
                 // push first sample
                 .setTangent(Math.toRadians(180))
                 .lineToX(-10)
@@ -45,11 +49,11 @@ public class Meep {
 
                 .setTangent(Math.toRadians(90))
                 .lineToY(50)
+                 */
 
                 // get into dropping position
                 .setTangent(Math.toRadians(180))
-                .lineToX(-50)
-                .splineTo(new Vector2d(-25, 61), Math.toRadians(0))
+                .strafeTo(new Vector2d(-25, 61))
                 .turn(Math.toRadians(-90))
 
                 // the hang 1

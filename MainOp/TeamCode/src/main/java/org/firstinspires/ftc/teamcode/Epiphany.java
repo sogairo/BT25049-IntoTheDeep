@@ -20,14 +20,14 @@ public class Epiphany extends LinearOpMode {
     // Initialize Constants
     // ------------------------------------------------ //
     public static class Configuration {
-        public double DRIVE_POWER_CONSTRAINT = 0.8;
+        public double DRIVE_POWER_CONSTRAINT = 0.825;
         public double SPOOL_ASCENT_CONSTRAINT = 0.7;
 
         public int MAX_SPOOL_POSITION = 2000;
         public int MIN_SPOOL_POSITION = 0;
         public int SPOOL_INCREMENT = 30;
-        public int SPOOL_POSITION_TOLERANCE = 15;
-        public int SAMPLE_BASKET_POSITION = 1610;
+        public int SPOOL_POSITION_TOLERANCE = 7;
+        public int SAMPLE_BASKET_POSITION = 2000;
         public int SPECIMEN_POSITION = 415;
 
         public double MAX_ARM_POSITION = 0.985;
@@ -275,19 +275,28 @@ public class Epiphany extends LinearOpMode {
             topRight.setPower(topRightPower);
             bottomRight.setPower(bottomRightPower);
 
+            /*
             // Telemetry
             // ------------------------------------------------ //
             telemetry.addData("Left 0 PID:", Math.min(controller.calculate(spoolLeft.getCurrentPosition(), currentSpoolPosition), Params.SPOOL_ASCENT_CONSTRAINT));
             telemetry.addData("Right 1 PID:", Math.min(controller.calculate(spoolRight.getCurrentPosition(), currentSpoolPosition), Params.SPOOL_ASCENT_CONSTRAINT));
+            */
 
+            if (setPositionType == Params.SPECIMEN_POSITION) {
+                telemetry.addData("Toggled State (For LinearSlides)", "SPECIMEN");
+            } else {
+                telemetry.addData("Toggled State (For LinearSlides)", "SAMPLE");
+            }
             telemetry.update();
 
+            /*
             // Dashboard Packets
             // ------------------------------------------------ //
             packet.put("targetPosition", currentSpoolPosition);
 
             packet.put("Left 0", spoolLeft.getCurrentPosition());
             packet.put("Right 1", spoolRight.getCurrentPosition());
+            */
 
             dashboard.sendTelemetryPacket(packet);
         }

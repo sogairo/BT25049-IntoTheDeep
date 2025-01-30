@@ -46,7 +46,7 @@ public class Eureka extends LinearOpMode {
         public Claw(HardwareMap hardwareMap) {
             clawServo = hardwareMap.get(Servo.class, "claw");
             clawServo.scaleRange(Params.MIN_CLAW_POSITION, Params.MAX_CLAW_POSITION);
-            //clawServo.setPosition(0);
+            clawServo.setPosition(0);
         }
 
         public class CloseClaw implements Action {
@@ -79,7 +79,7 @@ public class Eureka extends LinearOpMode {
 
         public Arm(HardwareMap hardwareMap) {
             armServo = hardwareMap.get(Servo.class, "armLeft");
-            //armServo.setPosition(Params.MIN_ARM_POSITION);
+            armServo.setPosition(Params.MIN_ARM_POSITION);
         }
 
         public class RaiseArm implements Action {
@@ -176,8 +176,8 @@ public class Eureka extends LinearOpMode {
                 spoolLeft.setPower(Math.min(controller.calculate(spoolLeft.getCurrentPosition(), currentSpoolPosition), Params.SPOOL_ASCENT_CONSTRAINT));
                 spoolRight.setPower(Math.min(controller.calculate(spoolRight.getCurrentPosition(), currentSpoolPosition), Params.SPOOL_ASCENT_CONSTRAINT));
 
-                return ((spoolLeft.getCurrentPosition() >= (currentSpoolPosition - Params.SPOOL_POSITION_TOLERANCE)) &&
-                        (spoolRight.getCurrentPosition() >= (currentSpoolPosition - Params.SPOOL_POSITION_TOLERANCE)));
+                return ((spoolLeft.getCurrentPosition() <= (currentSpoolPosition + Params.SPOOL_POSITION_TOLERANCE)) &&
+                        (spoolRight.getCurrentPosition() <= (currentSpoolPosition + Params.SPOOL_POSITION_TOLERANCE)));
             }
         }
 
@@ -190,7 +190,7 @@ public class Eureka extends LinearOpMode {
     // ------------------------------------------------ //
     @Override
     public void runOpMode() throws InterruptedException {
-        Pose2d initalStartingPose = new Pose2d(0, 0, 0);
+        Pose2d initalStartingPose = new Pose2d(0, 61.5,  Math.toRadians(-90));
         MecanumDrive drive = new MecanumDrive(hardwareMap, initalStartingPose);
 
         Claw claw = new Claw(hardwareMap);
@@ -199,11 +199,18 @@ public class Eureka extends LinearOpMode {
 
         // Develop Paths
         Action hangPreloadSpecimen = drive.actionBuilder(initalStartingPose)
-                .strafeTo(new Vector2d(33, 0))
+                .lineToY(25)
+                .build();
+
+        Action grabFirstSample = drive.actionBuilder(new Pose2d(0, 25,  Math.toRadians(-90)))
+                //.setTangent(Math.toRadians(180))
+                .strafeTo(new Vector2d(-48.1, 39))
+                .strafeTo(new Vector2d(-58.5, 39))
+                //.splineTo(new Vector2d(-48, 14), Math.toRadians(-180))
                 .build();
 
         Action simultaneousHang = drive.actionBuilder(initalStartingPose)
-                .waitSeconds(0.25)
+                .waitSeconds(0.4)
                 .stopAndAdd(claw.openClaw())
                 .build();
 
@@ -219,11 +226,15 @@ public class Eureka extends LinearOpMode {
 
                         // hang
                         new ParallelAction(
-                                linearSlides.lowerSlides(),
-                                simultaneousHang
-                        )
+                                linearSlides.lowerSlides()
+                        ),
+                        simultaneousHang,
 
-
+                        new ParallelAction(
+                                arm.lowerArm()
+                        ),
+                        // go to first sample
+                        grabFirstSample
                 )
         );
     }
