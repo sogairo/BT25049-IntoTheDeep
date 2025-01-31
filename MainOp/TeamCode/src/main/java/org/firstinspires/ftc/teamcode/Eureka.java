@@ -290,12 +290,13 @@ public class Eureka extends LinearOpMode {
 
                         // go to first sample
                         new ParallelAction(
-                                grabFirstSample,
-                                arm.grabSample()
-                        ),
-                        arm.lowerArm(),
-                        claw.closeClaw(),
+                                grabFirstSample
+                                //arm.grabSample()
+                        )//,
+                        //arm.lowerArm(),
+                        //claw.closeClaw()
 
+                        /*
                         depositSample,
                         claw.openClaw(),
 
@@ -358,6 +359,8 @@ public class Eureka extends LinearOpMode {
                                 ascendSubmersible
                         ),
                         arm.grabSample()
+
+                         */
                 )
         );
     }
