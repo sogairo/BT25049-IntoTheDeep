@@ -13,6 +13,7 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.Servo;
+import com.qualcomm.robotcore.hardware.VoltageSensor;
 
 @Config
 @TeleOp(name = "BT25046-Drive", group = "Competition")
@@ -21,7 +22,6 @@ public class Epiphany extends LinearOpMode {
     // ------------------------------------------------ //
     public static class Configuration {
         public double DRIVE_POWER_CONSTRAINT = 0.825;
-        public double SPOOL_ASCENT_CONSTRAINT = 0.7;
 
         public int MAX_SPOOL_POSITION = 2000;
         public int MIN_SPOOL_POSITION = 0;
@@ -42,6 +42,8 @@ public class Epiphany extends LinearOpMode {
     }
 
     public static Epiphany.Configuration Params = new Epiphany.Configuration();
+
+    public VoltageSensor voltageSensor;
 
     public DcMotorEx topLeft, bottomLeft, bottomRight, topRight;
     public DcMotorEx spoolLeft, spoolRight;
@@ -76,6 +78,10 @@ public class Epiphany extends LinearOpMode {
     // Retrieve hardwareMap devices
     // ------------------------------------------------ //
     public void INITALIZE_HARDWARE() {
+        // Misc
+        // ------------------------------------------------ //
+        voltageSensor = hardwareMap.voltageSensor.iterator().next();
+
         // Drivetrain
         // ------------------------------------------------ //
         topLeft = hardwareMap.get(DcMotorEx.class, "topLeft");
@@ -191,6 +197,7 @@ public class Epiphany extends LinearOpMode {
     }
 
     public void spoolFunction() {
+
         // This portion is programmed with the thought of the linear slides
         // being in it's initial position ( all the way down ) with starting
         // the bot.
@@ -238,8 +245,14 @@ public class Epiphany extends LinearOpMode {
         spoolLeft.setTargetPosition(currentSpoolPosition);
         spoolRight.setTargetPosition(currentSpoolPosition);
 
-        spoolLeft.setPower(Math.min(controller.calculate(spoolLeft.getCurrentPosition(), currentSpoolPosition), Params.SPOOL_ASCENT_CONSTRAINT));
-        spoolRight.setPower(Math.min(controller.calculate(spoolRight.getCurrentPosition(), currentSpoolPosition), Params.SPOOL_ASCENT_CONSTRAINT));
+        double voltage = voltageSensor.getVoltage();
+        double averagePID = ((controller.calculate(spoolLeft.getCurrentPosition(), currentSpoolPosition)
+                + controller.calculate(spoolRight.getCurrentPosition(), currentSpoolPosition)) / 2) / voltage;
+        telemetry.addData("AveragePID", averagePID);
+        telemetry.addData("Current Voltage", voltage);
+
+        spoolLeft.setPower(averagePID);
+        spoolRight.setPower(averagePID);
     }
 
     @Override
@@ -264,11 +277,12 @@ public class Epiphany extends LinearOpMode {
             double rx = gamepad1.right_stick_x;
 
             double denominator = Math.max(Math.abs(y) + Math.abs(x) + Math.abs(rx), 1);
+            double voltage = voltageSensor.getVoltage();
 
-            double topLeftPower = ((y + x + rx) / denominator) * Params.DRIVE_POWER_CONSTRAINT;
-            double bottomLeftPower = ((y - x + rx) / denominator) * Params.DRIVE_POWER_CONSTRAINT;
-            double topRightPower = ((y - x - rx) / denominator) * Params.DRIVE_POWER_CONSTRAINT;
-            double bottomRightPower = ((y + x - rx) / denominator) * Params.DRIVE_POWER_CONSTRAINT;
+            double topLeftPower = (((y + x + rx) / denominator) * Params.DRIVE_POWER_CONSTRAINT) / voltage;
+            double bottomLeftPower = (((y - x + rx) / denominator) * Params.DRIVE_POWER_CONSTRAINT) / voltage;
+            double topRightPower = (((y - x - rx) / denominator) * Params.DRIVE_POWER_CONSTRAINT) / voltage;
+            double bottomRightPower = (((y + x - rx) / denominator) * Params.DRIVE_POWER_CONSTRAINT) / voltage;
 
             topLeft.setPower(topLeftPower);
             bottomLeft.setPower(bottomLeftPower);

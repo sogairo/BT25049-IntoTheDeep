@@ -19,6 +19,7 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.Servo;
+import com.qualcomm.robotcore.hardware.VoltageSensor;
 
 import org.firstinspires.ftc.teamcode.enlightenment.MecanumDrive;
 
@@ -132,6 +133,7 @@ public class Eureka extends LinearOpMode {
     }
 
     public static class LinearSlides {
+        private final VoltageSensor voltageSensor;
         private final DcMotorEx spoolLeft, spoolRight;
 
         public LinearSlides(HardwareMap hardwareMap) {
@@ -153,6 +155,8 @@ public class Eureka extends LinearOpMode {
 
             spoolLeft.setPower(0.01);
             spoolRight.setPower(0.01);
+
+            voltageSensor = hardwareMap.voltageSensor.iterator().next();
         }
 
         public class RaiseSlides implements Action {
@@ -170,8 +174,12 @@ public class Eureka extends LinearOpMode {
                 spoolLeft.setTargetPosition(currentSpoolPosition);
                 spoolRight.setTargetPosition(currentSpoolPosition);
 
-                spoolLeft.setPower(Math.min(controller.calculate(spoolLeft.getCurrentPosition(), currentSpoolPosition), Params.SPOOL_ASCENT_CONSTRAINT));
-                spoolRight.setPower(Math.min(controller.calculate(spoolRight.getCurrentPosition(), currentSpoolPosition), Params.SPOOL_ASCENT_CONSTRAINT));
+                double voltage = voltageSensor.getVoltage();
+                double averagePID = ((controller.calculate(spoolLeft.getCurrentPosition(), currentSpoolPosition)
+                        + controller.calculate(spoolRight.getCurrentPosition(), currentSpoolPosition)) / 2) / voltage;
+
+                spoolLeft.setPower(averagePID);
+                spoolRight.setPower(averagePID);
 
                 return ((spoolLeft.getCurrentPosition() >= (currentSpoolPosition - Params.SPOOL_POSITION_TOLERANCE)) &&
                         (spoolRight.getCurrentPosition() >= (currentSpoolPosition - Params.SPOOL_POSITION_TOLERANCE)));
@@ -197,8 +205,12 @@ public class Eureka extends LinearOpMode {
                 spoolLeft.setTargetPosition(currentSpoolPosition);
                 spoolRight.setTargetPosition(currentSpoolPosition);
 
-                spoolLeft.setPower(Math.min(controller.calculate(spoolLeft.getCurrentPosition(), currentSpoolPosition), Params.SPOOL_ASCENT_CONSTRAINT));
-                spoolRight.setPower(Math.min(controller.calculate(spoolRight.getCurrentPosition(), currentSpoolPosition), Params.SPOOL_ASCENT_CONSTRAINT));
+                double voltage = voltageSensor.getVoltage();
+                double averagePID = ((controller.calculate(spoolLeft.getCurrentPosition(), currentSpoolPosition)
+                        + controller.calculate(spoolRight.getCurrentPosition(), currentSpoolPosition)) / 2) / voltage;
+
+                spoolLeft.setPower(averagePID);
+                spoolRight.setPower(averagePID);
 
                 return ((spoolLeft.getCurrentPosition() <= (currentSpoolPosition + Params.SPOOL_POSITION_TOLERANCE)) &&
                         (spoolRight.getCurrentPosition() <= (currentSpoolPosition + Params.SPOOL_POSITION_TOLERANCE)));
@@ -214,66 +226,27 @@ public class Eureka extends LinearOpMode {
     // ------------------------------------------------ //
     @Override
     public void runOpMode() throws InterruptedException {
-        Pose2d initalStartingPose = new Pose2d(0, 61.5,  Math.toRadians(-90));
+        Pose2d initalStartingPose = new Pose2d(0, 0,  0);
         MecanumDrive drive = new MecanumDrive(hardwareMap, initalStartingPose);
 
         Claw claw = new Claw(hardwareMap);
         LinearSlides linearSlides = new LinearSlides(hardwareMap);
         Arm arm = new Arm(hardwareMap);
 
+        /*
+        // Example
+
         Action hangPreloadSpecimen = drive.actionBuilder(initalStartingPose)
                 .lineToY(33)
                 .build();
-
-        Action grabFirstSample = drive.actionBuilder(new Pose2d(0, 33,  Math.toRadians(-90)))
-                .strafeTo(new Vector2d(-15, 35))
-                .lineToX(-48)
-                .build();
-
-        Action grabSecondSample = drive.actionBuilder(new Pose2d(-48, 50,  Math.toRadians(90)))
-                .strafeToLinearHeading(new Vector2d(-58.5, 39), Math.toRadians(-90))
-                .build();
-
-        Action depositSample = drive.actionBuilder(initalStartingPose)
-                .setTangent(Math.toRadians(90))
-                .lineToYLinearHeading(50, Math.toRadians(90))
-                .build();
-
-        Action initializeFactory = drive.actionBuilder(new Pose2d(-58.5, 50,  Math.toRadians(90)))
-                .setTangent(Math.toRadians(0))
-                .lineToX(-40)
-                .strafeToLinearHeading(new Vector2d(-32.5, 61.5), Math.toRadians(180))
-                .build();
-
-        Action hangLoadedSpecimen = drive.actionBuilder(new Pose2d(-32.5, 61.5,  Math.toRadians(180))) // fix pose
-                .strafeToLinearHeading(new Vector2d(0, 33), Math.toRadians(-90))
-                .build();
-
-        Action returnToFactory = drive.actionBuilder(new Pose2d(0, 33,  Math.toRadians(-90)))
-                .strafeToLinearHeading(new Vector2d(-32.5, 61.5), Math.toRadians(180))
-                .build();
-
-        Action ascendSubmersible = drive.actionBuilder(new Pose2d(0, 33,  Math.toRadians(-90)))
-                .strafeToLinearHeading(new Vector2d(-40, 50), Math.toRadians(0))
-                .setTangent(Math.toRadians(-90))
-                .lineToY(10)
-                .setTangent(Math.toRadians(0))
-                .lineToX(-24)
-                .build();
-
-        Action simultaneousHang = drive.actionBuilder(initalStartingPose)
-                .waitSeconds(0.4)
-                .stopAndAdd(claw.openClaw())
-                .build();
-
-        Action simultaneousGrab = drive.actionBuilder(initalStartingPose)
-                .stopAndAdd(arm.lowerArm())
-                .stopAndAdd(claw.closeClaw())
-                .build();
+         */
 
         waitForStart();
 
         Actions.runBlocking(new SequentialAction(
+                        /*
+                        // EXAMPLE
+
                         // raise arm + slides while going to specimen bar
                         new ParallelAction(
                                 arm.hangSpecimen(),
@@ -291,76 +264,9 @@ public class Eureka extends LinearOpMode {
                         // go to first sample
                         new ParallelAction(
                                 grabFirstSample
-                                //arm.grabSample()
-                        )//,
-                        //arm.lowerArm(),
-                        //claw.closeClaw()
+                        )
 
-                        /*
-                        depositSample,
-                        claw.openClaw(),
-
-                        // go to second sample
-                        new ParallelAction(
-                                grabSecondSample,
-                                arm.grabSample()
-                        ),
-                        arm.lowerArm(),
-                        claw.closeClaw(),
-
-                        depositSample,
-                        claw.openClaw(),
-
-                        // initialize factory
-                        new ParallelAction(
-                                initializeFactory,
-                                arm.grabSample()
-                        ),
-                        arm.lowerArm(),
-                        claw.closeClaw(),
-
-                        // get in specimen hanging pos
-                        new ParallelAction(
-                                arm.hangSpecimen(),
-                                linearSlides.raiseSlides(),
-                                hangLoadedSpecimen
-                        ),
-
-                        // hang it
-                        new ParallelAction(
-                                linearSlides.lowerSlides(),
-                                simultaneousHang
-                        ),
-
-                        // return
-                        new ParallelAction(
-                                returnToFactory,
-                                arm.grabSample()
-                        ),
-
-                        // get in specimen hanging pos
-                        new ParallelAction(
-                                arm.hangSpecimen(),
-                                linearSlides.raiseSlides(),
-                                hangLoadedSpecimen
-                        ),
-
-                        // hang it
-                        new ParallelAction(
-                                linearSlides.lowerSlides(),
-                                simultaneousHang
-                        ),
-                        arm.resetArm(),
-
-                        // ascend
-                        new ParallelAction(
-                                linearSlides.raiseSlides(),
-                                arm.hangSpecimen(),
-                                ascendSubmersible
-                        ),
-                        arm.grabSample()
-
-                         */
+                        */
                 )
         );
     }
