@@ -106,10 +106,18 @@ public class Elucidate extends LinearOpMode {
         }
 
         public class LowerArm implements Action {
+            private double currentArmPosition = armServo.getPosition();
+
             @Override
             public boolean run(@NonNull TelemetryPacket packet) {
-                armServo.setPosition(Params.MAX_ARM_POSITION);
-                return false;
+                if ((currentArmPosition + Params.ARM_INCREMENT) >= Params.MAX_ARM_POSITION) {
+                    currentArmPosition = Params.MAX_ARM_POSITION;
+                } else {
+                    currentArmPosition += Params.ARM_INCREMENT;
+                }
+
+                armServo.setPosition(currentArmPosition);
+                return ((Params.MAX_ARM_POSITION == currentArmPosition) && (Params.MAX_ARM_POSITION == armServo.getPosition()));
             }
         }
 
@@ -244,7 +252,7 @@ public class Elucidate extends LinearOpMode {
                 .strafeToLinearHeading(new Vector2d(-46.5, -47), Math.toRadians(80))
                 .stopAndAdd(linearSlides.lowerSlides())
                 .stopAndAdd(arm.lowerArm())
-                .waitSeconds(1)
+                .waitSeconds(2)
                 .stopAndAdd(claw.closeClaw())
                 .waitSeconds(1)
                 .stopAndAdd(arm.resetArm())
@@ -260,7 +268,7 @@ public class Elucidate extends LinearOpMode {
                 .strafeToLinearHeading(new Vector2d(-59, -47), Math.toRadians(80))
                 .stopAndAdd(linearSlides.lowerSlides())
                 .stopAndAdd(arm.lowerArm())
-                .waitSeconds(1)
+                .waitSeconds(2)
                 .stopAndAdd(claw.closeClaw())
                 .waitSeconds(1)
                 .stopAndAdd(arm.resetArm())

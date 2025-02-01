@@ -30,11 +30,11 @@ public class Epiphany extends LinearOpMode {
         public int SAMPLE_BASKET_POSITION = 2000;
         public int SPECIMEN_POSITION = 515;
 
-        public double MAX_ARM_POSITION = 0.985;
+        public double MAX_ARM_POSITION = 0.985; // Retune
         public double MIN_ARM_POSITION = 0;
         public double ARM_SAMPLE_POSITION = 0.5;
         public double ARM_SPECIMEN_POSITION = 0.48;
-        public double ARM_GRAB_POSITION = 0.88;
+        public double ARM_GRAB_POSITION = 0.88; // Retune?
         public double ARM_INCREMENT = 0.04;
 
         public double MIN_CLAW_POSITION = 0.455;
@@ -105,7 +105,7 @@ public class Epiphany extends LinearOpMode {
         armRight = hardwareMap.get(Servo.class, "armRight"); // Port 3
 
         claw.scaleRange(Params.MIN_CLAW_POSITION, Params.MAX_CLAW_POSITION);
-        armLeft.setDirection(Servo.Direction.REVERSE);
+        armLeft.setDirection(Servo.Direction.REVERSE); // Swapped to Port 2
         //armRight.setDirection(Servo.Direction.REVERSE);
 
         armRight.setPosition(currentArmPosition);
@@ -249,8 +249,6 @@ public class Epiphany extends LinearOpMode {
         double voltage = voltageSensor.getVoltage();
         double averagePID = ((controller.calculate(spoolLeft.getCurrentPosition(), currentSpoolPosition)
                 + controller.calculate(spoolRight.getCurrentPosition(), currentSpoolPosition)) / 2) / voltage;
-        telemetry.addData("AveragePID", averagePID);
-        telemetry.addData("Current Voltage", voltage);
 
         spoolLeft.setPower(averagePID);
         spoolRight.setPower(averagePID);
@@ -289,13 +287,8 @@ public class Epiphany extends LinearOpMode {
             topRight.setPower(topRightPower);
             bottomRight.setPower(bottomRightPower);
 
-            /*
             // Telemetry
             // ------------------------------------------------ //
-            telemetry.addData("Left 0 PID:", Math.min(controller.calculate(spoolLeft.getCurrentPosition(), currentSpoolPosition), Params.SPOOL_ASCENT_CONSTRAINT));
-            telemetry.addData("Right 1 PID:", Math.min(controller.calculate(spoolRight.getCurrentPosition(), currentSpoolPosition), Params.SPOOL_ASCENT_CONSTRAINT));
-            */
-
             if (setPositionType == Params.SPECIMEN_POSITION) {
                 telemetry.addData("Toggled State (For LinearSlides)", "SPECIMEN");
             } else {
@@ -310,9 +303,9 @@ public class Epiphany extends LinearOpMode {
 
             packet.put("Left 0", spoolLeft.getCurrentPosition());
             packet.put("Right 1", spoolRight.getCurrentPosition());
-            */
 
             dashboard.sendTelemetryPacket(packet);
+            */
         }
     }
 }

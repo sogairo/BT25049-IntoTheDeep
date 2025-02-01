@@ -239,6 +239,7 @@ public class Eureka extends LinearOpMode {
                 .lineToY(36.5)
                 .build();
 
+        /*
         Action grabFirstSample = drive.actionBuilder(new Pose2d(0, 33,  0))
                 .strafeToLinearHeading(new Vector2d(-15, 39), Math.toRadians(0))
                 .lineToX(-54)
@@ -250,15 +251,15 @@ public class Eureka extends LinearOpMode {
                 .turn(Math.toRadians(170))
                 .build();
 
-        /*Action grabSecondSample = drive.actionBuilder(new Pose2d(-48, 50,  0))
+        Action grabSecondSample = drive.actionBuilder(new Pose2d(-48, 50,  0))
                 .strafeToLinearHeading(new Vector2d(-58.5, 39), Math.toRadians(-90))
-                .build();*/
+                .build();
 
         Action depositSample = drive.actionBuilder(new Pose2d(-66, 38.5, 0))
                 .waitSeconds(2)
                 .turn(Math.toRadians(90))
                 .build();
-        /*
+
         Action initializeFactory = drive.actionBuilder(new Pose2d(-58.5, 50,  0))
                 .setTangent(Math.toRadians(0))
                 .lineToX(-40)
@@ -309,11 +310,13 @@ public class Eureka extends LinearOpMode {
                                 linearSlides.lowerSlides(),
                                 simultaneousHang
                         ),
-                        arm.resetArm(),
+                        arm.resetArm()
+
+                        /*
 
                         // go to first sample
                         grabFirstSample
-/*
+
                         // go to second sample
                         new ParallelAction(
                                 grabSecondSample,
@@ -374,7 +377,7 @@ public class Eureka extends LinearOpMode {
                         ),
                         arm.grabSample()
 
-                         */
+                        */
                 )
         );
     }
