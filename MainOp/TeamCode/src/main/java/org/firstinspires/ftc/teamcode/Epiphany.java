@@ -28,13 +28,13 @@ public class Epiphany extends LinearOpMode {
         public int SPOOL_INCREMENT = 30;
         public int SPOOL_POSITION_TOLERANCE = 7;
         public int SAMPLE_BASKET_POSITION = 2000;
-        public int SPECIMEN_POSITION = 415;
+        public int SPECIMEN_POSITION = 515;
 
         public double MAX_ARM_POSITION = 0.985;
         public double MIN_ARM_POSITION = 0;
         public double ARM_SAMPLE_POSITION = 0.5;
         public double ARM_SPECIMEN_POSITION = 0.48;
-        public double ARM_GRAB_POSITION = 0.92;
+        public double ARM_GRAB_POSITION = 0.88;
         public double ARM_INCREMENT = 0.04;
 
         public double MIN_CLAW_POSITION = 0.455;
@@ -105,7 +105,8 @@ public class Epiphany extends LinearOpMode {
         armRight = hardwareMap.get(Servo.class, "armRight"); // Port 3
 
         claw.scaleRange(Params.MIN_CLAW_POSITION, Params.MAX_CLAW_POSITION);
-        armRight.setDirection(Servo.Direction.REVERSE);
+        armLeft.setDirection(Servo.Direction.REVERSE);
+        //armRight.setDirection(Servo.Direction.REVERSE);
 
         armRight.setPosition(currentArmPosition);
         armLeft.setPosition(currentArmPosition);
@@ -277,12 +278,11 @@ public class Epiphany extends LinearOpMode {
             double rx = gamepad1.right_stick_x;
 
             double denominator = Math.max(Math.abs(y) + Math.abs(x) + Math.abs(rx), 1);
-            double voltage = voltageSensor.getVoltage();
 
-            double topLeftPower = (((y + x + rx) / denominator) * Params.DRIVE_POWER_CONSTRAINT) / voltage;
-            double bottomLeftPower = (((y - x + rx) / denominator) * Params.DRIVE_POWER_CONSTRAINT) / voltage;
-            double topRightPower = (((y - x - rx) / denominator) * Params.DRIVE_POWER_CONSTRAINT) / voltage;
-            double bottomRightPower = (((y + x - rx) / denominator) * Params.DRIVE_POWER_CONSTRAINT) / voltage;
+            double topLeftPower = (((y + x + rx) / denominator) * Params.DRIVE_POWER_CONSTRAINT);
+            double bottomLeftPower = (((y - x + rx) / denominator) * Params.DRIVE_POWER_CONSTRAINT);
+            double topRightPower = (((y - x - rx) / denominator) * Params.DRIVE_POWER_CONSTRAINT);
+            double bottomRightPower = (((y + x - rx) / denominator) * Params.DRIVE_POWER_CONSTRAINT);
 
             topLeft.setPower(topLeftPower);
             bottomLeft.setPower(bottomLeftPower);
