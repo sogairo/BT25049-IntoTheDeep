@@ -81,7 +81,6 @@ public class Eureka extends LinearOpMode {
         public Arm(HardwareMap hardwareMap) {
             armServo = hardwareMap.get(Servo.class, "armLeft");
             armServo.setDirection(Servo.Direction.REVERSE);
-            armServo.setPosition(Params.MIN_ARM_POSITION);
         }
 
         public class HangSpecimen implements Action {
@@ -293,6 +292,10 @@ public class Eureka extends LinearOpMode {
                 .stopAndAdd(claw.closeClaw())
                 .build();
 
+        Action endAutonomous = drive.actionBuilder(initalStartingPose)
+                .waitSeconds(2)
+                .lineToY(61.5)
+                .build();
 
 
         waitForStart();
@@ -310,7 +313,9 @@ public class Eureka extends LinearOpMode {
                                 linearSlides.lowerSlides(),
                                 simultaneousHang
                         ),
-                        arm.resetArm()
+                        claw.openClaw(),
+                        arm.resetArm(),
+                        endAutonomous
 
                         /*
 

@@ -78,7 +78,6 @@ public class Elucidate extends LinearOpMode {
         public Arm(HardwareMap hardwareMap) {
             armServo = hardwareMap.get(Servo.class, "armLeft");
             armServo.setDirection(Servo.Direction.REVERSE);
-            armServo.setPosition(Params.MIN_ARM_POSITION);
         }
 
         public class DropSample implements Action {
@@ -96,7 +95,7 @@ public class Elucidate extends LinearOpMode {
         public class GrabSample implements Action {
             @Override
             public boolean run(@NonNull TelemetryPacket packet) {
-                armServo.setPosition(Params.ARM_GRAB_POSITION);
+                armServo.setPosition(Params.ARM_GRAB_POSITION - 0.05);
                 return false;
             }
         }
@@ -106,18 +105,19 @@ public class Elucidate extends LinearOpMode {
         }
 
         public class LowerArm implements Action {
-            private double currentArmPosition = armServo.getPosition();
+            private double currentArmPosition = 0;
 
             @Override
             public boolean run(@NonNull TelemetryPacket packet) {
-                if ((currentArmPosition + Params.ARM_INCREMENT) >= Params.MAX_ARM_POSITION) {
+                double increment = 0.005;
+                if ((currentArmPosition + increment) >= Params.MAX_ARM_POSITION) {
                     currentArmPosition = Params.MAX_ARM_POSITION;
                 } else {
-                    currentArmPosition += Params.ARM_INCREMENT;
+                    currentArmPosition += increment;
                 }
 
                 armServo.setPosition(currentArmPosition);
-                return ((Params.MAX_ARM_POSITION == currentArmPosition) && (Params.MAX_ARM_POSITION == armServo.getPosition()));
+                return ((Params.MAX_ARM_POSITION != currentArmPosition) && (Params.MAX_ARM_POSITION != armServo.getPosition()));
             }
         }
 
@@ -187,8 +187,8 @@ public class Elucidate extends LinearOpMode {
                 spoolLeft.setPower(averagePID);
                 spoolRight.setPower(averagePID);
 
-                return ((spoolLeft.getCurrentPosition() >= (currentSpoolPosition - Params.SPOOL_POSITION_TOLERANCE)) &&
-                        (spoolRight.getCurrentPosition() >= (currentSpoolPosition - Params.SPOOL_POSITION_TOLERANCE)));
+                return ((spoolLeft.getCurrentPosition() <= (currentSpoolPosition - Params.SPOOL_POSITION_TOLERANCE)) &&
+                        (spoolRight.getCurrentPosition() <= (currentSpoolPosition - Params.SPOOL_POSITION_TOLERANCE)));
             }
         }
 
@@ -218,8 +218,8 @@ public class Elucidate extends LinearOpMode {
                 spoolLeft.setPower(averagePID);
                 spoolRight.setPower(averagePID);
 
-                return ((spoolLeft.getCurrentPosition() <= (currentSpoolPosition + Params.SPOOL_POSITION_TOLERANCE)) &&
-                        (spoolRight.getCurrentPosition() <= (currentSpoolPosition + Params.SPOOL_POSITION_TOLERANCE)));
+                return ((spoolLeft.getCurrentPosition() >= (currentSpoolPosition + Params.SPOOL_POSITION_TOLERANCE)) &&
+                        (spoolRight.getCurrentPosition() >= (currentSpoolPosition + Params.SPOOL_POSITION_TOLERANCE)));
             }
         }
 
@@ -240,52 +240,70 @@ public class Elucidate extends LinearOpMode {
         Arm arm = new Arm(hardwareMap);
 
         Action dropPreloadSample = drive.actionBuilder(initalStartingPose)
-                .strafeToLinearHeading(new Vector2d(-59, -55), Math.toRadians(225))
+                .strafeToLinearHeading(new Vector2d(-60.5, -50.5), Math.toRadians(225))
                 .stopAndAdd(linearSlides.raiseSlides())
                 .stopAndAdd(arm.dropSample())
-                .waitSeconds(1.5)
-                .stopAndAdd(claw.openClaw())
                 .waitSeconds(1)
+                .stopAndAdd(claw.openClaw())
+                .waitSeconds(0.5)
                 .build();
 
-        Action getSampleOne = drive.actionBuilder(new Pose2d(-59, -55, 0))
-                .strafeToLinearHeading(new Vector2d(-46.5, -47), Math.toRadians(80))
+        Action getSampleOne = drive.actionBuilder(new Pose2d(-62.5, -58.5, 0))
+                .stopAndAdd(arm.resetArm())
+                .waitSeconds(0.5)
                 .stopAndAdd(linearSlides.lowerSlides())
+                .strafeToLinearHeading(new Vector2d(-44.5, -48.5), Math.toRadians(85.5))
+                .stopAndAdd(arm.grabSample())
+                .waitSeconds(1)
                 .stopAndAdd(arm.lowerArm())
                 .waitSeconds(2)
                 .stopAndAdd(claw.closeClaw())
                 .waitSeconds(1)
                 .stopAndAdd(arm.resetArm())
-                .strafeToLinearHeading(new Vector2d(-59, -53), Math.toRadians(225))
+                .waitSeconds(0.5)
+                .strafeToLinearHeading(new Vector2d(-62.5, -60), Math.toRadians(225))
                 .stopAndAdd(linearSlides.raiseSlides())
                 .stopAndAdd(arm.dropSample())
-                .waitSeconds(1.5)
+                .waitSeconds(1)
                 .stopAndAdd(claw.openClaw())
                 .waitSeconds(1)
                 .build();
 
-        Action getSampleTwo = drive.actionBuilder(new Pose2d(-59, -55, 0))
+        Action getSampleTwo = drive.actionBuilder(new Pose2d(-62.5, -58.5, 0))
+                .stopAndAdd(arm.resetArm())
+                .waitSeconds(0.5)
+                .stopAndAdd(linearSlides.lowerSlides())
                 .strafeToLinearHeading(new Vector2d(-59, -47), Math.toRadians(80))
-                .stopAndAdd(linearSlides.lowerSlides())
+                .stopAndAdd(arm.grabSample())
+                .waitSeconds(1)
                 .stopAndAdd(arm.lowerArm())
                 .waitSeconds(2)
                 .stopAndAdd(claw.closeClaw())
                 .waitSeconds(1)
                 .stopAndAdd(arm.resetArm())
+                .waitSeconds(0.5)
                 .strafeToLinearHeading(new Vector2d(-59, -53), Math.toRadians(225))
                 .stopAndAdd(linearSlides.raiseSlides())
                 .stopAndAdd(arm.dropSample())
-                .waitSeconds(1.5)
+                .waitSeconds(1)
                 .stopAndAdd(claw.openClaw())
                 .waitSeconds(1)
+                .build();
+
+        Action endAutonomous = drive.actionBuilder(initalStartingPose)
+                .stopAndAdd(arm.resetArm())
+                .waitSeconds(0.5)
+                .stopAndAdd(linearSlides.lowerSlides())
+                .waitSeconds(2)
                 .build();
 
         waitForStart();
 
         Actions.runBlocking(new SequentialAction(
                         dropPreloadSample,
-                        getSampleOne,
-                        getSampleTwo
+                        //getSampleOne,
+                        //getSampleTwo,
+                        endAutonomous
                 )
         );
     }

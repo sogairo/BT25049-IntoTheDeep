@@ -21,14 +21,14 @@ public class Epiphany extends LinearOpMode {
     // Initialize Constants
     // ------------------------------------------------ //
     public static class Configuration {
-        public double DRIVE_POWER_CONSTRAINT = 0.825;
+        public double DRIVE_POWER_CONSTRAINT = 0.85;
 
         public int MAX_SPOOL_POSITION = 2000;
         public int MIN_SPOOL_POSITION = 0;
         public int SPOOL_INCREMENT = 30;
         public int SPOOL_POSITION_TOLERANCE = 7;
         public int SAMPLE_BASKET_POSITION = 2000;
-        public int SPECIMEN_POSITION = 515;
+        public int SPECIMEN_POSITION = 615;
 
         public double MAX_ARM_POSITION = 0.985; // Retune
         public double MIN_ARM_POSITION = 0;
@@ -109,7 +109,7 @@ public class Epiphany extends LinearOpMode {
         //armRight.setDirection(Servo.Direction.REVERSE);
 
         armRight.setPosition(currentArmPosition);
-        armLeft.setPosition(currentArmPosition);
+        //armLeft.setPosition(currentArmPosition);
         claw.setPosition(1);
         pivot.setPosition(1);
 
@@ -203,7 +203,9 @@ public class Epiphany extends LinearOpMode {
         // being in it's initial position ( all the way down ) with starting
         // the bot.
         controller.setPIDF(PIDFParams.kP, PIDFParams.kI, PIDFParams.kD, PIDFParams.kF);
-
+        if (gamepad1.dpad_down) {
+            currentSpoolPosition -= Params.SPOOL_INCREMENT;
+        }
         if (gamepad1.right_trigger > 0) {
             if ((currentSpoolPosition + Params.SPOOL_INCREMENT) >= Params.MAX_SPOOL_POSITION) {
                 currentSpoolPosition = Params.MAX_SPOOL_POSITION;
