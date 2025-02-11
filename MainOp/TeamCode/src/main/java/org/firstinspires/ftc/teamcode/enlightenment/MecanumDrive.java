@@ -5,9 +5,7 @@ import androidx.annotation.NonNull;
 import com.acmerobotics.dashboard.canvas.Canvas;
 import com.acmerobotics.dashboard.config.Config;
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
-import com.acmerobotics.roadrunner.AccelConstraint;
-import com.acmerobotics.roadrunner.Action;
-import com.acmerobotics.roadrunner.Actions;
+import com.acmerobotics.roadrunner.*;
 import com.acmerobotics.roadrunner.AngularVelConstraint;
 import com.acmerobotics.roadrunner.DualNum;
 import com.acmerobotics.roadrunner.HolonomicController;
@@ -16,20 +14,12 @@ import com.acmerobotics.roadrunner.MinVelConstraint;
 import com.acmerobotics.roadrunner.MotorFeedforward;
 import com.acmerobotics.roadrunner.Pose2d;
 import com.acmerobotics.roadrunner.Pose2dDual;
-import com.acmerobotics.roadrunner.PoseVelocity2d;
-import com.acmerobotics.roadrunner.PoseVelocity2dDual;
 import com.acmerobotics.roadrunner.ProfileAccelConstraint;
-import com.acmerobotics.roadrunner.ProfileParams;
-import com.acmerobotics.roadrunner.Rotation2d;
 import com.acmerobotics.roadrunner.Time;
 import com.acmerobotics.roadrunner.TimeTrajectory;
 import com.acmerobotics.roadrunner.TimeTurn;
 import com.acmerobotics.roadrunner.TrajectoryActionBuilder;
-import com.acmerobotics.roadrunner.TrajectoryBuilderParams;
 import com.acmerobotics.roadrunner.TurnConstraints;
-import com.acmerobotics.roadrunner.Twist2d;
-import com.acmerobotics.roadrunner.Twist2dDual;
-import com.acmerobotics.roadrunner.Vector2d;
 import com.acmerobotics.roadrunner.VelConstraint;
 import com.acmerobotics.roadrunner.ftc.DownsampledWriter;
 import com.acmerobotics.roadrunner.ftc.Encoder;
@@ -42,8 +32,8 @@ import com.acmerobotics.roadrunner.ftc.RawEncoder;
 import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.hardware.rev.RevHubOrientationOnRobot;
 import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.IMU;
 import com.qualcomm.robotcore.hardware.VoltageSensor;
@@ -55,6 +45,7 @@ import org.firstinspires.ftc.teamcode.enlightenment.messages.MecanumCommandMessa
 import org.firstinspires.ftc.teamcode.enlightenment.messages.MecanumLocalizerInputsMessage;
 import org.firstinspires.ftc.teamcode.enlightenment.messages.PoseMessage;
 
+import java.lang.Math;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
@@ -68,15 +59,17 @@ public final class MecanumDrive {
         public RevHubOrientationOnRobot.UsbFacingDirection usbFacingDirection =
                 RevHubOrientationOnRobot.UsbFacingDirection.UP;
 
+        // TODO: Re-tune the constants below.
+
         // drive model parameters
-        public double inPerTick = 0.0246179966;
-        public double lateralInPerTick = 0.0274217043;
-        public double trackWidthTicks = 1009.6774088357544;
+        public double inPerTick = 0;
+        public double lateralInPerTick = 0;
+        public double trackWidthTicks = 0;
 
         // feedforward parameters (in tick units)
-        public double kS = 1.7176091293076272;
-        public double kV = 0.004320195836506514;
-        public double kA = 0.0005;
+        public double kS = 0;
+        public double kV = 0;
+        public double kA = 0; // 0.0005
 
         // path profile parameters (in inches)
         public double maxWheelVel = 50;
@@ -88,13 +81,13 @@ public final class MecanumDrive {
         public double maxAngAccel = Math.PI;
 
         // path controller gains
-        public double axialGain = 5.0;
-        public double lateralGain = 3.0;
-        public double headingGain = 1.5; // shared with turn
+        public double axialGain = 0; // 5.0
+        public double lateralGain = 0; // 3.0
+        public double headingGain = 0; // 1.5
 
         public double axialVelGain = 0.0;
         public double lateralVelGain = 0.0;
-        public double headingVelGain = 0.0; // shared with turn
+        public double headingVelGain = 0.0;
     }
 
     public static Params PARAMS = new Params();
@@ -247,7 +240,7 @@ public final class MecanumDrive {
 
         voltageSensor = hardwareMap.voltageSensor.iterator().next();
 
-        localizer = new DriveLocalizer(pose);
+        localizer = new ThreeDeadWheelLocalizer(hardwareMap, PARAMS.inPerTick, pose);
 
         FlightRecorder.write("MECANUM_PARAMS", PARAMS);
     }
