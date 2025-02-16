@@ -10,7 +10,7 @@ This is BT25049/BudjetTech's code used for the 2024-2025 FTC Into The Deep compe
 
 # Viewing the Code
 
-Check if your Android SDK on **Android 15.0** ( _"VanillaIceCream", API Level: 35_ ). If not, change it to that.
+Check if your Android SDK is on **Android 15.0** ( _"VanillaIceCream", API Level: 35_ ). If not, change your Android SDK to that.
 
 Do the following to view the code for TeleOp:
 1.  Open the TeleOp folder in [Android Studio](https://developer.android.com/studio?hl=en).
@@ -20,7 +20,7 @@ Do the following to view the code for TeleOp:
 Do the following to view the code for Autonomous:
 1.  Open the Autonomous folder in [Android Studio](https://developer.android.com/studio?hl=en).
 2.  Check if the project structure's Android Gradle Plugin Version is on ***8.7.3*** and also that the Gradle Version is on ***8.9***.
-3.  Follow step **<ins>nine</ins>** in the [MeepMeep Documentation](https://github.com/acmerobotics/MeepMeep?tab=readme-ov-file#installing-android-studio) to visualize the path used in this season.
+3.  Follow step **<ins>nine</ins>** in the [MeepMeep Documentation](https://github.com/acmerobotics/MeepMeep?tab=readme-ov-file#installing-android-studio) to visualize the path used for this season.
 
 # Notes
 
