@@ -94,8 +94,8 @@ public class Epiphany extends LinearOpMode {
         bottomRight.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         topRight.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
-        bottomRight.setDirection(DcMotorSimple.Direction.REVERSE);
-        topRight.setDirection(DcMotorSimple.Direction.REVERSE);
+        //bottomRight.setDirection(DcMotorSimple.Direction.REVERSE);
+        //topRight.setDirection(DcMotorSimple.Direction.REVERSE);
 
         // Servos
         // ------------------------------------------------ //
@@ -198,7 +198,6 @@ public class Epiphany extends LinearOpMode {
     }
 
     public void spoolFunction() {
-
         // This portion is programmed with the thought of the linear slides
         // being in it's initial position ( all the way down ) with starting
         // the bot.
