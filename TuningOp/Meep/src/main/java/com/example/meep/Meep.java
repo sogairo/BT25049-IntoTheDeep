@@ -19,9 +19,7 @@ public class Meep {
         //Pose2d sampleint = new Pose2d(-38, -61.5, Math.toRadians(-90));
 
         // actual path
-        myBot.runAction(myBot.getDrive().actionBuilder(new Pose2d(0, 61.5, Math.toRadians(-90)))
-                                .lineToY(41)
-                /*
+        myBot.runAction(myBot.getDrive().actionBuilder(new Pose2d(-38, -61.5, Math.toRadians(90)))
                 // preload
                 .strafeToLinearHeading(new Vector2d(-57, -56), Math.toRadians(225))
 
@@ -36,8 +34,6 @@ public class Meep {
 
                 // back
                 .strafeToLinearHeading(new Vector2d(-57, -56), Math.toRadians(225))
-
-                 */
                 .build());
 
         meepMeep.setBackground(MeepMeep.Background.FIELD_INTO_THE_DEEP_JUICE_DARK)

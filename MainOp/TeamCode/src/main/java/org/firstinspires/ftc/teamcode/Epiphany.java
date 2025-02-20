@@ -18,22 +18,22 @@ import com.qualcomm.robotcore.hardware.VoltageSensor;
 @Config
 @TeleOp(name = "BT25046-Drive", group = "Competition")
 public class Epiphany extends LinearOpMode {
-    // TODO: Retune the MAX_SPOOL_POSITION.
-
     // Initialize Constants
     // ------------------------------------------------ //
     public static class Configuration {
         public boolean SHOW_DEBUG = false;
+        public boolean OVERRIDE = false;
 
         public double DRIVE_POWER_CONSTRAINT = 0.85;
 
-        public int MAX_SPOOL_POSITION = 2000;
+        public int MAX_SPOOL_POSITION = 2750;
         public int MIN_SPOOL_POSITION = 0;
-        public int SPOOL_POSITION_TOLERANCE = 7;
-        public int SPOOL_INCREMENT = 30;
+        public int SPOOL_POSITION_TOLERANCE = 20;
+        public int SPOOL_INCREMENT = 75;
+        public double SPOOL_HOLDING_POWER = 0;
 
-        public int SAMPLE_BASKET_POSITION = 2000;
-        public int SPECIMEN_POSITION = 615;
+        public int SAMPLE_BASKET_POSITION = 2750;
+        public int SPECIMEN_POSITION = 915;
 
         public double MAX_ARM_POSITION = 0.985;
         public double MIN_ARM_POSITION = 0;
@@ -43,8 +43,11 @@ public class Epiphany extends LinearOpMode {
         public double ARM_SPECIMEN_POSITION = 0.48;
         public double ARM_GRAB_POSITION = 0.88;
 
-        public double MIN_CLAW_POSITION = 0.455;
-        public double MAX_CLAW_POSITION = 0.625;
+        public double MIN_CLAW_POSITION = 0.35;
+        public double MAX_CLAW_POSITION = 0.7;
+
+        public double MIN_PIVOT_POSITION = 0.35;
+        public double MAX_PIVOT_POSITION = 0.875;
     }
 
     public static Epiphany.Configuration Params = new Epiphany.Configuration();
@@ -69,16 +72,16 @@ public class Epiphany extends LinearOpMode {
 
     private boolean pressXDebounce = false;
     private boolean pressYDebounce = false;
-    private boolean pressBDebounce = false;
     private boolean pressADebounce = false;
+    private boolean pressUPDebounce = false;
 
     // Setup PIDF Configuration
     // ------------------------------------------------ //
     public static class PIDFConfiguration {
-        public double kP = 0.025;
+        public double kP = 0.01;
         public double kI = 0.01;
         public double kD = 0;
-        public double kF = 0.00001;
+        public double kF = Params.SPOOL_HOLDING_POWER;
     }
 
     public static Epiphany.PIDFConfiguration PIDFParams = new Epiphany.PIDFConfiguration();
@@ -104,6 +107,9 @@ public class Epiphany extends LinearOpMode {
         bottomRight = hardwareMap.get(DcMotorEx.class, "bottomRight");
         topRight = hardwareMap.get(DcMotorEx.class, "topRight");
 
+        bottomLeft.setDirection(DcMotorSimple.Direction.REVERSE);
+        bottomRight.setDirection(DcMotorSimple.Direction.REVERSE);
+
         topLeft.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         bottomLeft.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
         bottomRight.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
@@ -116,17 +122,16 @@ public class Epiphany extends LinearOpMode {
         arm = hardwareMap.get(Servo.class, "arm");
 
         claw.scaleRange(Params.MIN_CLAW_POSITION, Params.MAX_CLAW_POSITION);
-        arm.setDirection(Servo.Direction.REVERSE);
+        pivot.scaleRange(Params.MIN_PIVOT_POSITION, Params.MAX_PIVOT_POSITION);
 
-        claw.setPosition(1);
-        pivot.setPosition(1);
+        claw.setPosition(0);
 
         // Linear Slides
         // ------------------------------------------------ //
         spoolLeft = hardwareMap.get(DcMotorEx.class, "spoolLeft");
         spoolRight = hardwareMap.get(DcMotorEx.class, "spoolRight");
 
-        spoolRight.setDirection(DcMotorSimple.Direction.REVERSE);
+        spoolLeft.setDirection(DcMotorSimple.Direction.REVERSE);
 
         spoolLeft.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         spoolRight.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
@@ -147,9 +152,10 @@ public class Epiphany extends LinearOpMode {
     // ------------------------------------------------ //
     public void clawFunction() {
         // Manual
+        // ------------------------------------------------ //
         if (gamepad1.x && !pressXDebounce) {
             pressXDebounce = true;
-
+            
             if (claw.getPosition() == 0) {
                 claw.setPosition(1);
             } else {
@@ -170,6 +176,7 @@ public class Epiphany extends LinearOpMode {
     // ------------------------------------------------ //
     public void pivotFunction() {
         // Manual
+        // ------------------------------------------------ //
         if (gamepad1.a && !pressADebounce) {
             pressADebounce = true;
 
@@ -185,7 +192,7 @@ public class Epiphany extends LinearOpMode {
         // Debug
         // ------------------------------------------------ //
         if (Params.SHOW_DEBUG) {
-            telemetry.addData("Pivot Position", pivot.getPosition());
+            telemetry.addData("Claw Pivot Position", pivot.getPosition());
         }
     }
 
@@ -193,6 +200,7 @@ public class Epiphany extends LinearOpMode {
     // ------------------------------------------------ //
     public void armFunction() {
         // Manual
+        // ------------------------------------------------ //
         if (gamepad1.right_bumper) {
             if ((currentArmPosition + Params.ARM_INCREMENT) >= Params.MAX_ARM_POSITION) {
                 currentArmPosition = Params.MAX_ARM_POSITION;
@@ -208,22 +216,15 @@ public class Epiphany extends LinearOpMode {
         }
 
         // Hotkey
-        if (gamepad1.dpad_up) {
-            if (setPositionType == Params.SPECIMEN_POSITION) {
-                currentArmPosition = Params.ARM_SPECIMEN_POSITION;
-            } else {
-                currentArmPosition = Params.ARM_SAMPLE_POSITION;
-            }
-        } else if (gamepad1.dpad_left) {
+        // ------------------------------------------------ //
+        if (gamepad1.b) {
             currentArmPosition = Params.ARM_GRAB_POSITION;
-        } else if (gamepad1.dpad_right) {
-            currentArmPosition = Params.MIN_ARM_POSITION;
         }
 
         // Debug
         // ------------------------------------------------ //
         if (Params.SHOW_DEBUG) {
-            telemetry.addData("Arm Position", currentArmPosition);
+            telemetry.addData("Arm Position", arm.getPosition());
         }
 
         arm.setPosition(currentArmPosition);
@@ -232,41 +233,49 @@ public class Epiphany extends LinearOpMode {
     // Spool Function
     // ------------------------------------------------ //
     public void spoolFunction() {
-        controller.setPIDF(PIDFParams.kP, PIDFParams.kI, PIDFParams.kD, PIDFParams.kF);
-
-        // Override
-        if (gamepad1.dpad_down) {
-            currentSpoolPosition -= Params.SPOOL_INCREMENT;
-        }
-
         // Manual
+        // ------------------------------------------------ //
         if (gamepad1.right_trigger > 0) {
-            if ((currentSpoolPosition + Params.SPOOL_INCREMENT) >= Params.MAX_SPOOL_POSITION) {
-                currentSpoolPosition = Params.MAX_SPOOL_POSITION;
-            } else {
+            if (Params.OVERRIDE) {
                 currentSpoolPosition += Params.SPOOL_INCREMENT;
+            } else {
+                if (((currentSpoolPosition + Params.SPOOL_INCREMENT) >= Params.MAX_SPOOL_POSITION)) {
+                    currentSpoolPosition = Params.MAX_SPOOL_POSITION;
+                } else {
+                    currentSpoolPosition += Params.SPOOL_INCREMENT;
+                }
             }
         } else if (gamepad1.left_trigger > 0) {
-            if ((currentSpoolPosition - Params.SPOOL_INCREMENT) <= Params.MIN_SPOOL_POSITION) {
-                currentSpoolPosition = Params.MIN_SPOOL_POSITION;
-            } else {
+            if (Params.OVERRIDE) {
                 currentSpoolPosition -= Params.SPOOL_INCREMENT;
+            } else {
+                if ((currentSpoolPosition - Params.SPOOL_INCREMENT) <= Params.MIN_SPOOL_POSITION) {
+                    currentSpoolPosition = Params.MIN_SPOOL_POSITION;
+                } else {
+                    currentSpoolPosition -= Params.SPOOL_INCREMENT;
+                }
             }
+        }
+
+        // Override
+        // ------------------------------------------------ //
+        if (gamepad1.dpad_up && !pressUPDebounce) {
+            pressUPDebounce = true;
+            Params.OVERRIDE = !Params.OVERRIDE;
+        } else if (!gamepad1.dpad_up && pressUPDebounce) {
+            pressUPDebounce = false;
         }
 
         // Toggle
-        if (gamepad1.b && !pressBDebounce) {
-            pressBDebounce = true;
-            if (setPositionType == Params.SPECIMEN_POSITION) {
-                setPositionType = Params.SAMPLE_BASKET_POSITION;
-            } else {
-                setPositionType = Params.SPECIMEN_POSITION;
-            }
-        } else if (!gamepad1.b && pressBDebounce) {
-            pressBDebounce = false;
+        // ------------------------------------------------ //
+        if (gamepad1.dpad_left) {
+            setPositionType = Params.SPECIMEN_POSITION;
+        } else if (gamepad1.dpad_right) {
+            setPositionType = Params.SAMPLE_BASKET_POSITION;
         }
 
         // Hotkey
+        // ------------------------------------------------ //
         if (gamepad1.y && !pressYDebounce) {
             pressYDebounce = true;
             if (currentSpoolPosition != setPositionType) {
@@ -290,38 +299,54 @@ public class Epiphany extends LinearOpMode {
         double averagePID = ((controller.calculate(spoolLeft.getCurrentPosition(), currentSpoolPosition)
                 + controller.calculate(spoolRight.getCurrentPosition(), currentSpoolPosition)) / 2) / voltage;
 
+        // TODO: Fix linear slides smoking
+        if (averagePID >= 0) {
+            if ((spoolLeft.getCurrentPosition() >= (currentSpoolPosition - Params.SPOOL_POSITION_TOLERANCE))
+                    && (spoolRight.getCurrentPosition() >= (currentSpoolPosition - Params.SPOOL_POSITION_TOLERANCE))) {
+                telemetry.addData("Output1", "reached");
+                spoolLeft.setPower(Params.SPOOL_HOLDING_POWER);
+                spoolRight.setPower(Params.SPOOL_HOLDING_POWER);
+            } else {
+                spoolLeft.setPower(averagePID);
+                spoolRight.setPower(averagePID);
+            }
+        } else {
+            if ((spoolLeft.getCurrentPosition() <= (currentSpoolPosition + Params.SPOOL_POSITION_TOLERANCE)) &&
+                    (spoolRight.getCurrentPosition() <= (currentSpoolPosition + Params.SPOOL_POSITION_TOLERANCE))) {
+                telemetry.addData("Output2", "reached");
+                spoolLeft.setPower(Params.SPOOL_HOLDING_POWER);
+                spoolRight.setPower(Params.SPOOL_HOLDING_POWER);
+            } else {
+                spoolLeft.setPower(averagePID);
+                spoolRight.setPower(averagePID);
+            }
+        }
+
         // Debug
         // ------------------------------------------------ //
         if (Params.SHOW_DEBUG) {
-            packet.put("averagePID", averagePID);
+            packet.put("Left0 Power", spoolLeft.getPower());
+            packet.put("Right1 Power", spoolRight.getPower());
 
             packet.put("targetPosition", currentSpoolPosition);
 
-            packet.put("Left 0", spoolLeft.getCurrentPosition());
-            packet.put("Right 1", spoolRight.getCurrentPosition());
+            packet.put("Left0 Position", spoolLeft.getCurrentPosition());
+            packet.put("Right1 Position", spoolRight.getCurrentPosition());
         }
-
-        spoolLeft.setPower(averagePID);
-        spoolRight.setPower(averagePID);
     }
 
     @Override
     public void runOpMode() throws InterruptedException {
         initializeHardware();
 
-        // Dashboard Setup
-        // ------------------------------------------------ //
-        TelemetryPacket packet = new TelemetryPacket();
-
         waitForStart();
         if (isStopRequested()) return;
 
         while (opModeIsActive()) {
+            armFunction();
             clawFunction();
             pivotFunction();
-            armFunction();
-            spoolFunction();
-            spoolFunction();
+            //spoolFunction();
 
             // Drive
             // ------------------------------------------------ //
@@ -347,6 +372,11 @@ public class Epiphany extends LinearOpMode {
                 telemetry.addData("Toggled State (For LinearSlides)", "SPECIMEN");
             } else {
                 telemetry.addData("Toggled State (For LinearSlides)", "SAMPLE");
+            }
+            if (Params.OVERRIDE) {
+                telemetry.addData("Spool State:", "Overwriting");
+            } else {
+                telemetry.addData("Spool State:", "Constraining");
             }
             telemetry.update();
 
