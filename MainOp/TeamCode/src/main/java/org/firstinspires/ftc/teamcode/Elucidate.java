@@ -36,6 +36,8 @@ public class Elucidate extends LinearOpMode {
     // Initalize Variables
     // ------------------------------------------------ //
     public static int currentSpoolPosition = Params.MIN_SPOOL_POSITION;
+    public static double currentArmPosition = Params.MIN_ARM_POSITION;
+
     private static final int setPositionType = Params.SPECIMEN_POSITION;
 
     // Create Actions for Objects
@@ -84,8 +86,25 @@ public class Elucidate extends LinearOpMode {
         public class DropSample implements Action {
             @Override
             public boolean run(@NonNull TelemetryPacket packet) {
-                // TODO: REWORK, MAKE IT INCREMENT
-                armServo.setPosition(Params.ARM_SAMPLE_POSITION);
+                if (currentArmPosition < Params.ARM_SAMPLE_POSITION) {
+                    while (currentArmPosition < Params.ARM_SAMPLE_POSITION) {
+                        if ((currentArmPosition + Params.ARM_INCREMENT) >= Params.ARM_SAMPLE_POSITION) {
+                            currentArmPosition = Params.ARM_SAMPLE_POSITION;
+                        } else {
+                            currentArmPosition += Params.ARM_INCREMENT;
+                        }
+                        armServo.setPosition(currentArmPosition);
+                    }
+                } else {
+                    while (currentArmPosition > Params.ARM_SAMPLE_POSITION) {
+                        if ((currentArmPosition - Params.ARM_INCREMENT) <= Params.ARM_SAMPLE_POSITION) {
+                            currentArmPosition = Params.ARM_SAMPLE_POSITION;
+                        } else {
+                            currentArmPosition -= Params.ARM_INCREMENT;
+                        }
+                        armServo.setPosition(currentArmPosition);
+                    }
+                }
                 return false;
             }
         }
@@ -94,34 +113,18 @@ public class Elucidate extends LinearOpMode {
             return new DropSample();
         }
 
-        public class GrabSample implements Action {
-            @Override
-            public boolean run(@NonNull TelemetryPacket packet) {
-                // TODO: REWORK, MAKE IT INCREMENT
-                armServo.setPosition(Params.ARM_GRAB_POSITION - 0.05);
-                return false;
-            }
-        }
-
-        public Action grabSample() {
-            return new GrabSample();
-        }
-
         public class Lower implements Action {
-            private double currentArmPosition = 0;
-
             @Override
             public boolean run(@NonNull TelemetryPacket packet) {
-                // TODO: REWORK, MAKE IT INCREMENT
-                double increment = 0.005;
-                if ((currentArmPosition + increment) >= Params.MAX_ARM_POSITION) {
-                    currentArmPosition = Params.MAX_ARM_POSITION;
-                } else {
-                    currentArmPosition += increment;
+                while (currentArmPosition < Params.MAX_ARM_POSITION) {
+                    if ((currentArmPosition + Params.ARM_INCREMENT) >= Params.MAX_ARM_POSITION) {
+                        currentArmPosition = Params.MAX_ARM_POSITION;
+                    } else {
+                        currentArmPosition += Params.ARM_INCREMENT;
+                    }
+                    armServo.setPosition(currentArmPosition);
                 }
-
-                armServo.setPosition(currentArmPosition);
-                return ((Params.MAX_ARM_POSITION != currentArmPosition) && (Params.MAX_ARM_POSITION != armServo.getPosition()));
+                return false;
             }
         }
 
@@ -132,7 +135,6 @@ public class Elucidate extends LinearOpMode {
         public class Rest implements Action {
             @Override
             public boolean run(@NonNull TelemetryPacket packet) {
-                // TODO: REWORK, MAKE IT INCREMENT
                 armServo.setPosition(Params.MIN_ARM_POSITION);
                 return false;
             }
@@ -158,8 +160,6 @@ public class Elucidate extends LinearOpMode {
 
             spoolLeft.setTargetPosition(Params.MIN_SPOOL_POSITION);
             spoolRight.setTargetPosition(Params.MIN_SPOOL_POSITION);
-            spoolLeft.setTargetPositionTolerance(Params.SPOOL_POSITION_TOLERANCE);
-            spoolRight.setTargetPositionTolerance(Params.SPOOL_POSITION_TOLERANCE);
 
             spoolLeft.setMode(DcMotor.RunMode.RUN_TO_POSITION);
             spoolRight.setMode(DcMotor.RunMode.RUN_TO_POSITION);
@@ -180,25 +180,18 @@ public class Elucidate extends LinearOpMode {
                     initialized = true;
                 }
 
-                controller.setPIDF(PIDFParams.kP, PIDFParams.kI, PIDFParams.kD, PIDFParams.kF);
-
                 spoolLeft.setTargetPosition(currentSpoolPosition);
                 spoolRight.setTargetPosition(currentSpoolPosition);
 
                 double voltage = voltageSensor.getVoltage();
                 double averagePID = ((controller.calculate(spoolLeft.getCurrentPosition(), currentSpoolPosition)
                         + controller.calculate(spoolRight.getCurrentPosition(), currentSpoolPosition)) / 2) / voltage;
+                averagePID = Math.floor(averagePID * 100) / 100;
 
                 spoolLeft.setPower(averagePID);
                 spoolRight.setPower(averagePID);
 
-                if ((spoolLeft.getCurrentPosition() >= (currentSpoolPosition - Params.SPOOL_POSITION_TOLERANCE)) &&
-                        (spoolRight.getCurrentPosition() >= (currentSpoolPosition - Params.SPOOL_POSITION_TOLERANCE))) {
-                    spoolLeft.setPower(0.005);
-                    spoolRight.setPower(0.005);
-                    return false;
-                }
-                return true;
+                return (averagePID > 0.01);
             }
         }
 
@@ -222,17 +215,12 @@ public class Elucidate extends LinearOpMode {
                 double voltage = voltageSensor.getVoltage();
                 double averagePID = ((controller.calculate(spoolLeft.getCurrentPosition(), currentSpoolPosition)
                         + controller.calculate(spoolRight.getCurrentPosition(), currentSpoolPosition)) / 2) / voltage;
+                averagePID = Math.floor(averagePID * 100) / 100;
 
                 spoolLeft.setPower(averagePID);
                 spoolRight.setPower(averagePID);
 
-                if ((spoolLeft.getCurrentPosition() <= (currentSpoolPosition + Params.SPOOL_POSITION_TOLERANCE)) &&
-                        (spoolRight.getCurrentPosition() <= (currentSpoolPosition + Params.SPOOL_POSITION_TOLERANCE))) {
-                    spoolLeft.setPower(0.005);
-                    spoolRight.setPower(0.005);
-                    return false;
-                }
-                return true;
+                return (averagePID > 0.01);
             }
         }
 
@@ -253,22 +241,18 @@ public class Elucidate extends LinearOpMode {
         Arm arm = new Arm(hardwareMap);
 
         Action dropPreloadSample = drive.actionBuilder(initalStartingPose)
-                .strafeToLinearHeading(new Vector2d(-57, -56), Math.toRadians(225))
-
-                // TODO: Make this parallel
+                .strafeToLinearHeading(new Vector2d(-55, -56), Math.toRadians(225))
                 .stopAndAdd(linearSlides.raise())
                 .stopAndAdd(arm.dropSample())
-
                 .waitSeconds(0.5)
                 .stopAndAdd(claw.open())
                 .waitSeconds(0.5)
                 .build();
 
-        Action getSampleOne = drive.actionBuilder(new Pose2d(-57, -56, 0))
+        Action getSampleOne = drive.actionBuilder(new Pose2d(-55, -56, 0))
                 .stopAndAdd(arm.rest())
                 .stopAndAdd(linearSlides.lower())
-                .strafeToLinearHeading(new Vector2d(-46.5, -45), Math.toRadians(90))
-                .stopAndAdd(arm.grabSample())
+                .strafeToLinearHeading(new Vector2d(-47.5, -45), Math.toRadians(90))
                 .waitSeconds(1)
                 .stopAndAdd(arm.lower())
                 .waitSeconds(2)
@@ -276,7 +260,7 @@ public class Elucidate extends LinearOpMode {
                 .waitSeconds(1)
                 .stopAndAdd(arm.rest())
                 .waitSeconds(0.5)
-                .strafeToLinearHeading(new Vector2d(-57, -56), Math.toRadians(225))
+                .strafeToLinearHeading(new Vector2d(-55, -56), Math.toRadians(225))
                 .stopAndAdd(linearSlides.raise())
                 .stopAndAdd(arm.dropSample())
                 .waitSeconds(1)
@@ -284,12 +268,11 @@ public class Elucidate extends LinearOpMode {
                 .waitSeconds(1)
                 .build();
 
-        Action getSampleTwo = drive.actionBuilder(new Pose2d(-57, -56, 0))
+        Action getSampleTwo = drive.actionBuilder(new Pose2d(-55, -56, 0))
                 .stopAndAdd(arm.rest())
                 .waitSeconds(0.5)
                 .stopAndAdd(linearSlides.lower())
-                .strafeToLinearHeading(new Vector2d(-57, -45), Math.toRadians(90))
-                .stopAndAdd(arm.grabSample())
+                .strafeToLinearHeading(new Vector2d(-55, -58), Math.toRadians(90))
                 .waitSeconds(1)
                 .stopAndAdd(arm.lower())
                 .waitSeconds(2)
@@ -297,7 +280,27 @@ public class Elucidate extends LinearOpMode {
                 .waitSeconds(1)
                 .stopAndAdd(arm.rest())
                 .waitSeconds(0.5)
-                .strafeToLinearHeading(new Vector2d(-57, -56), Math.toRadians(225))
+                .strafeToLinearHeading(new Vector2d(-55, -56), Math.toRadians(225))
+                .stopAndAdd(linearSlides.raise())
+                .stopAndAdd(arm.dropSample())
+                .waitSeconds(1)
+                .stopAndAdd(claw.open())
+                .waitSeconds(1)
+                .build();
+
+        Action getSampleThree = drive.actionBuilder(new Pose2d(-55, -56, 0))
+                .stopAndAdd(arm.rest())
+                .waitSeconds(0.5)
+                .stopAndAdd(linearSlides.lower())
+                .strafeToLinearHeading(new Vector2d(-49, -26), Math.toRadians(180))
+                .waitSeconds(1)
+                .stopAndAdd(arm.lower())
+                .waitSeconds(2)
+                .stopAndAdd(claw.close())
+                .waitSeconds(1)
+                .stopAndAdd(arm.rest())
+                .waitSeconds(0.5)
+                .strafeToLinearHeading(new Vector2d(-55, -56), Math.toRadians(225))
                 .stopAndAdd(linearSlides.raise())
                 .stopAndAdd(arm.dropSample())
                 .waitSeconds(1)
@@ -318,6 +321,7 @@ public class Elucidate extends LinearOpMode {
                         dropPreloadSample,
                         getSampleOne,
                         getSampleTwo,
+                        getSampleThree,
                         endAutonomous
                 )
         );

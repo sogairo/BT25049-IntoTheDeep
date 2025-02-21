@@ -29,7 +29,8 @@ public class Epiphany extends LinearOpMode {
         public int MAX_SPOOL_POSITION = 2750;
         public int MIN_SPOOL_POSITION = 0;
         public int SPOOL_POSITION_TOLERANCE = 20;
-        public int SPOOL_INCREMENT = 75;
+        public int SPOOL_OVERWRITE_INCREMENT = 75;
+        public int SPOOL_DEFAULT_INCREMENT = 75;
         public double SPOOL_HOLDING_POWER = 0;
 
         public int SAMPLE_BASKET_POSITION = 2750;
@@ -66,9 +67,12 @@ public class Epiphany extends LinearOpMode {
     // Initialize Variables
     // ------------------------------------------------ //
     public static int currentSpoolPosition = Params.MIN_SPOOL_POSITION;
+    private int currentSpoolIncrement = Params.SPOOL_DEFAULT_INCREMENT;
     private int setPositionType = Params.SAMPLE_BASKET_POSITION;
 
     private double currentArmPosition = Params.MIN_ARM_POSITION;
+    private double currentClawPosition = 0;
+    private double currentPivotPosition = 0;
 
     private boolean pressXDebounce = false;
     private boolean pressYDebounce = false;
@@ -124,8 +128,6 @@ public class Epiphany extends LinearOpMode {
         claw.scaleRange(Params.MIN_CLAW_POSITION, Params.MAX_CLAW_POSITION);
         pivot.scaleRange(Params.MIN_PIVOT_POSITION, Params.MAX_PIVOT_POSITION);
 
-        claw.setPosition(0);
-
         // Linear Slides
         // ------------------------------------------------ //
         spoolLeft = hardwareMap.get(DcMotorEx.class, "spoolLeft");
@@ -138,8 +140,6 @@ public class Epiphany extends LinearOpMode {
 
         spoolLeft.setTargetPosition(Params.MIN_SPOOL_POSITION);
         spoolRight.setTargetPosition(Params.MIN_SPOOL_POSITION);
-        spoolLeft.setTargetPositionTolerance(Params.SPOOL_POSITION_TOLERANCE);
-        spoolRight.setTargetPositionTolerance(Params.SPOOL_POSITION_TOLERANCE);
 
         spoolLeft.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         spoolRight.setMode(DcMotor.RunMode.RUN_TO_POSITION);
@@ -156,10 +156,12 @@ public class Epiphany extends LinearOpMode {
         if (gamepad1.x && !pressXDebounce) {
             pressXDebounce = true;
             
-            if (claw.getPosition() == 0) {
-                claw.setPosition(1);
+            if (currentClawPosition == 0) {
+                currentClawPosition = 1;
+                claw.setPosition(currentClawPosition);
             } else {
-                claw.setPosition(0);
+                currentClawPosition = 0;
+                claw.setPosition(currentClawPosition);
             }
         } else if (!gamepad1.x && pressXDebounce) {
             pressXDebounce = false;
@@ -180,10 +182,12 @@ public class Epiphany extends LinearOpMode {
         if (gamepad1.a && !pressADebounce) {
             pressADebounce = true;
 
-            if (pivot.getPosition() == 0) {
-                pivot.setPosition(1);
+            if (currentPivotPosition == 0) {
+                currentPivotPosition = 1;
+                pivot.setPosition(currentPivotPosition);
             } else {
-                pivot.setPosition(0);
+                currentPivotPosition = 0;
+                pivot.setPosition(currentPivotPosition);
             }
         } else if (!gamepad1.a && pressADebounce) {
             pressADebounce = false;
@@ -237,22 +241,22 @@ public class Epiphany extends LinearOpMode {
         // ------------------------------------------------ //
         if (gamepad1.right_trigger > 0) {
             if (Params.OVERRIDE) {
-                currentSpoolPosition += Params.SPOOL_INCREMENT;
+                currentSpoolPosition += currentSpoolIncrement;
             } else {
-                if (((currentSpoolPosition + Params.SPOOL_INCREMENT) >= Params.MAX_SPOOL_POSITION)) {
+                if (((currentSpoolPosition + currentSpoolIncrement) >= Params.MAX_SPOOL_POSITION)) {
                     currentSpoolPosition = Params.MAX_SPOOL_POSITION;
                 } else {
-                    currentSpoolPosition += Params.SPOOL_INCREMENT;
+                    currentSpoolPosition += currentSpoolIncrement;
                 }
             }
         } else if (gamepad1.left_trigger > 0) {
             if (Params.OVERRIDE) {
-                currentSpoolPosition -= Params.SPOOL_INCREMENT;
+                currentSpoolPosition -= currentSpoolIncrement;
             } else {
-                if ((currentSpoolPosition - Params.SPOOL_INCREMENT) <= Params.MIN_SPOOL_POSITION) {
+                if ((currentSpoolPosition - currentSpoolIncrement) <= Params.MIN_SPOOL_POSITION) {
                     currentSpoolPosition = Params.MIN_SPOOL_POSITION;
                 } else {
-                    currentSpoolPosition -= Params.SPOOL_INCREMENT;
+                    currentSpoolPosition -= currentSpoolIncrement;
                 }
             }
         }
@@ -261,6 +265,11 @@ public class Epiphany extends LinearOpMode {
         // ------------------------------------------------ //
         if (gamepad1.dpad_up && !pressUPDebounce) {
             pressUPDebounce = true;
+            if (Params.OVERRIDE) {
+                currentSpoolIncrement = Params.SPOOL_OVERWRITE_INCREMENT;
+            } else {
+                currentSpoolIncrement = Params.SPOOL_DEFAULT_INCREMENT;
+            }
             Params.OVERRIDE = !Params.OVERRIDE;
         } else if (!gamepad1.dpad_up && pressUPDebounce) {
             pressUPDebounce = false;
@@ -298,29 +307,10 @@ public class Epiphany extends LinearOpMode {
         double voltage = voltageSensor.getVoltage();
         double averagePID = ((controller.calculate(spoolLeft.getCurrentPosition(), currentSpoolPosition)
                 + controller.calculate(spoolRight.getCurrentPosition(), currentSpoolPosition)) / 2) / voltage;
+        averagePID = Math.floor(averagePID * 100) / 100;
 
-        // TODO: Fix linear slides smoking
-        if (averagePID >= 0) {
-            if ((spoolLeft.getCurrentPosition() >= (currentSpoolPosition - Params.SPOOL_POSITION_TOLERANCE))
-                    && (spoolRight.getCurrentPosition() >= (currentSpoolPosition - Params.SPOOL_POSITION_TOLERANCE))) {
-                telemetry.addData("Output1", "reached");
-                spoolLeft.setPower(Params.SPOOL_HOLDING_POWER);
-                spoolRight.setPower(Params.SPOOL_HOLDING_POWER);
-            } else {
-                spoolLeft.setPower(averagePID);
-                spoolRight.setPower(averagePID);
-            }
-        } else {
-            if ((spoolLeft.getCurrentPosition() <= (currentSpoolPosition + Params.SPOOL_POSITION_TOLERANCE)) &&
-                    (spoolRight.getCurrentPosition() <= (currentSpoolPosition + Params.SPOOL_POSITION_TOLERANCE))) {
-                telemetry.addData("Output2", "reached");
-                spoolLeft.setPower(Params.SPOOL_HOLDING_POWER);
-                spoolRight.setPower(Params.SPOOL_HOLDING_POWER);
-            } else {
-                spoolLeft.setPower(averagePID);
-                spoolRight.setPower(averagePID);
-            }
-        }
+        spoolLeft.setPower(averagePID);
+        spoolRight.setPower(averagePID);
 
         // Debug
         // ------------------------------------------------ //
@@ -346,7 +336,7 @@ public class Epiphany extends LinearOpMode {
             armFunction();
             clawFunction();
             pivotFunction();
-            //spoolFunction();
+            spoolFunction();
 
             // Drive
             // ------------------------------------------------ //

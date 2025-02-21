@@ -21,19 +21,25 @@ public class Meep {
         // actual path
         myBot.runAction(myBot.getDrive().actionBuilder(new Pose2d(-38, -61.5, Math.toRadians(90)))
                 // preload
-                .strafeToLinearHeading(new Vector2d(-57, -56), Math.toRadians(225))
+                .strafeToLinearHeading(new Vector2d(-55, -56), Math.toRadians(225))
 
                 // sample 1
-                .strafeToLinearHeading(new Vector2d(-46.5, -45), Math.toRadians(90))
+                .strafeToLinearHeading(new Vector2d(-47.5, -45), Math.toRadians(90))
 
                 // back
-                .strafeToLinearHeading(new Vector2d(-57, -56), Math.toRadians(225))
+                .strafeToLinearHeading(new Vector2d(-55, -56), Math.toRadians(225))
 
-                //
-                .strafeToLinearHeading(new Vector2d(-57, -45), Math.toRadians(90))
+                // sample 2
+                .strafeToLinearHeading(new Vector2d(-58, -45), Math.toRadians(90))
 
                 // back
-                .strafeToLinearHeading(new Vector2d(-57, -56), Math.toRadians(225))
+                .strafeToLinearHeading(new Vector2d(-55, -56), Math.toRadians(225))
+
+                // sample 3
+                .strafeToLinearHeading(new Vector2d(-49, -26), Math.toRadians(180))
+
+                // back
+                .strafeToLinearHeading(new Vector2d(-55, -56), Math.toRadians(225))
                 .build());
 
         meepMeep.setBackground(MeepMeep.Background.FIELD_INTO_THE_DEEP_JUICE_DARK)
