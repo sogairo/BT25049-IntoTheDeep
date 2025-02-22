@@ -265,21 +265,21 @@ public class Elucidate extends LinearOpMode {
     // ------------------------------------------------ //
     @Override
     public void runOpMode() throws InterruptedException {
-        Pose2d initalStartingPose = new Pose2d(-38, -61.5, Math.toRadians(90));
-        MecanumDrive drive = new MecanumDrive(hardwareMap, initalStartingPose);
+        Pose2d initialStartingPose = new Pose2d(-38, -61.5, Math.toRadians(90));
+        MecanumDrive drive = new MecanumDrive(hardwareMap, initialStartingPose);
 
         Claw claw = new Claw(hardwareMap);
         LinearSlides linearSlides = new LinearSlides(hardwareMap);
         Arm arm = new Arm(hardwareMap);
         Pivot pivot = new Pivot(hardwareMap);
 
-        Action dropPreloadSample = drive.actionBuilder(initalStartingPose)
+        Action dropPreloadSample = drive.actionBuilder(initialStartingPose)
                 .stopAndAdd(arm.rest())
                 .stopAndAdd(pivot.horizontal())
 
                 // Drop Sample
                 .stopAndAdd(new ParallelAction(
-                        drive.actionBuilder(initalStartingPose)
+                        drive.actionBuilder(initialStartingPose)
                                 .strafeToLinearHeading(new Vector2d(-55, -56), Math.toRadians(225))
                                 .build(),
                         linearSlides.raise()
@@ -383,11 +383,11 @@ public class Elucidate extends LinearOpMode {
                 .waitSeconds(0.2)
                 .build();
 
-        Action endAutonomous = drive.actionBuilder(initalStartingPose)
+        Action endAutonomous = drive.actionBuilder(initialStartingPose)
                 .stopAndAdd(arm.rest())
-                .waitSeconds(1)
                 .stopAndAdd(linearSlides.lower())
-                .waitSeconds(2)
+                .strafeToLinearHeading(new Vector2d(-50, -32), Math.toRadians(0))
+                .splineToConstantHeading(new Vector2d(-24.5, -10), 0)
                 .build();
 
         waitForStart();

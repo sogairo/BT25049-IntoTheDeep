@@ -289,18 +289,6 @@ public final class MecanumDrive {
                 t = Actions.now() - beginTs;
             }
 
-            /*
-            // TODO: Restore if autonomous breaks
-            if (t >= timeTrajectory.duration) {
-                leftFront.setPower(0);
-                leftBack.setPower(0);
-                rightBack.setPower(0);
-                rightFront.setPower(0);
-
-                return false;
-            }
-             */
-
             Pose2dDual<Time> txWorldTarget = timeTrajectory.get(t);
             targetPoseWriter.write(new PoseMessage(txWorldTarget.value()));
 
@@ -308,25 +296,24 @@ public final class MecanumDrive {
 
             Pose2d error = txWorldTarget.value().minusExp(localizer.getPose());
 
+            // Extra position correction
             if ((t >= timeTrajectory.duration && error.position.norm() < 2
                     && robotVelRobot.linearVel.norm() < 0.5)
                     || t >= timeTrajectory.duration + 0.25) {
 
-                leftFront.setPower(0);
-                leftBack.setPower(0);
-                rightBack.setPower(0);
-                rightFront.setPower(0);
+                // Extra degree correction
+                // TODO: Check if this works
+                if ((t >= timeTrajectory.duration && (error.heading.toDouble() < 1 || error.heading.toDouble() > -1)
+                        && robotVelRobot.angVel < 0.5)
+                        || t >= timeTrajectory.duration + 0.25) {
+                    leftFront.setPower(0);
+                    leftBack.setPower(0);
+                    rightBack.setPower(0);
+                    rightFront.setPower(0);
 
-                return false;
+                    return false;
+                }
             }
-
-            /*
-            // TODO: Restore if autonomous breaks
-            Pose2dDual<Time> txWorldTarget = timeTrajectory.get(t);
-            targetPoseWriter.write(new PoseMessage(txWorldTarget.value()));
-
-            PoseVelocity2d robotVelRobot = updatePoseEstimate();
-             */
 
             PoseVelocity2dDual<Time> command = new HolonomicController(
                     PARAMS.axialGain, PARAMS.lateralGain, PARAMS.headingGain,
@@ -357,10 +344,6 @@ public final class MecanumDrive {
             p.put("y", localizer.getPose().position.y);
             p.put("heading (deg)", Math.toDegrees(localizer.getPose().heading.toDouble()));
 
-            /*
-            // TODO: Restore if autonomous breaks
-            Pose2d error = txWorldTarget.value().minusExp(localizer.getPose());
-             */
             p.put("xError", error.position.x);
             p.put("yError", error.position.y);
             p.put("headingError (deg)", Math.toDegrees(error.heading.toDouble()));

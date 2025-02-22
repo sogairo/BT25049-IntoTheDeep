@@ -7,6 +7,7 @@ package org.firstinspires.ftc.teamcode;
 
 import androidx.annotation.NonNull;
 
+import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.acmerobotics.roadrunner.Action;
 import com.acmerobotics.roadrunner.ParallelAction;
@@ -42,9 +43,10 @@ public class Eureka extends LinearOpMode {
     // Initalize Variables
     // ------------------------------------------------ //
     public static int currentSpoolPosition = Params.MIN_SPOOL_POSITION;
-    private static final int setPositionType = Params.SPECIMEN_POSITION;
+    public static double currentArmPosition = Params.MIN_ARM_POSITION;
 
-    // Create Actions for Objects
+
+    // Claw Action
     // ------------------------------------------------ //
     public static class Claw {
         private final Servo clawServo;
@@ -52,22 +54,10 @@ public class Eureka extends LinearOpMode {
         public Claw(HardwareMap hardwareMap) {
             clawServo = hardwareMap.get(Servo.class, "claw");
             clawServo.scaleRange(Params.MIN_CLAW_POSITION, Params.MAX_CLAW_POSITION);
-            clawServo.setPosition(0);
+            clawServo.setPosition(1);
         }
 
-        public class CloseClaw implements Action {
-            @Override
-            public boolean run(@NonNull TelemetryPacket packet) {
-                clawServo.setPosition(0);
-                return false;
-            }
-        }
-
-        public Action closeClaw() {
-            return new CloseClaw();
-        }
-
-        public class OpenClaw implements Action {
+        public class Close implements Action {
             @Override
             public boolean run(@NonNull TelemetryPacket packet) {
                 clawServo.setPosition(1);
@@ -75,85 +65,128 @@ public class Eureka extends LinearOpMode {
             }
         }
 
-        public Action openClaw() {
-            return new OpenClaw();
+        public Action close() {
+            return new Close();
+        }
+
+        public class Open implements Action {
+            @Override
+            public boolean run(@NonNull TelemetryPacket packet) {
+                clawServo.setPosition(0);
+                return false;
+            }
+        }
+
+        public Action open() {
+            return new Open();
         }
     }
 
+    // Pivot Action
+    // ------------------------------------------------ //
+    public static class Pivot {
+        private final Servo pivotServo;
+
+        public Pivot(HardwareMap hardwareMap) {
+            pivotServo = hardwareMap.get(Servo.class, "pivot");
+            pivotServo.scaleRange(Params.MIN_PIVOT_POSITION, Params.MAX_PIVOT_POSITION);
+            pivotServo.setPosition(0);
+        }
+
+        public class Horizontal implements Action {
+            @Override
+            public boolean run(@NonNull TelemetryPacket packet) {
+                pivotServo.setPosition(0);
+                return false;
+            }
+        }
+
+        public Action horizontal() {
+            return new Horizontal();
+        }
+
+        public class Vertical implements Action {
+            @Override
+            public boolean run(@NonNull TelemetryPacket packet) {
+                pivotServo.setPosition(1);
+                return false;
+            }
+        }
+
+        public Action vertical() {
+            return new Vertical();
+        }
+    }
+
+    // Arm Action
+    // ------------------------------------------------ //
     public static class Arm {
         private final Servo armServo;
 
         public Arm(HardwareMap hardwareMap) {
-            armServo = hardwareMap.get(Servo.class, "armLeft");
-            armServo.setDirection(Servo.Direction.REVERSE);
+            armServo = hardwareMap.get(Servo.class, "arm");
         }
 
-        public class HangSpecimen implements Action {
+        public class Lower implements Action {
             @Override
             public boolean run(@NonNull TelemetryPacket packet) {
-                armServo.setPosition(Params.ARM_SPECIMEN_POSITION);
+                while (currentArmPosition < Params.MAX_ARM_POSITION) {
+                    if ((currentArmPosition + Params.ARM_AUTONOMOUS_INCREMENT) >= Params.MAX_ARM_POSITION) {
+                        currentArmPosition = Params.MAX_ARM_POSITION;
+                        break;
+                    } else {
+                        currentArmPosition += Params.ARM_AUTONOMOUS_INCREMENT;
+                    }
+
+                    TelemetryPacket temp = new TelemetryPacket();
+                    temp.put("CurrentArmPosition", currentArmPosition);
+                    FtcDashboard.getInstance().sendTelemetryPacket(temp);
+
+                    armServo.setPosition(currentArmPosition);
+                }
                 return false;
             }
         }
 
-        public Action hangSpecimen() {
-            return new HangSpecimen();
+        public Action lower() {
+            return new Lower();
         }
 
-        public class GrabSample implements Action {
+        public class Rest implements Action {
             @Override
             public boolean run(@NonNull TelemetryPacket packet) {
-                armServo.setPosition(Params.ARM_GRAB_POSITION);
+                currentArmPosition = Params.MIN_ARM_POSITION;
+                armServo.setPosition(currentArmPosition);
                 return false;
             }
         }
 
-        public Action grabSample() {
-            return new GrabSample();
-        }
-
-        public class LowerArm implements Action {
-            @Override
-            public boolean run(@NonNull TelemetryPacket packet) {
-                armServo.setPosition(Params.MAX_ARM_POSITION);
-                return false;
-            }
-        }
-
-        public Action lowerArm() {
-            return new LowerArm();
-        }
-
-        public class ResetArm implements Action {
-            @Override
-            public boolean run(@NonNull TelemetryPacket packet) {
-                armServo.setPosition(Params.MIN_ARM_POSITION);
-                return false;
-            }
-        }
-
-        public Action resetArm() {
-            return new ResetArm();
+        public Action rest() {
+            return new Rest();
         }
     }
 
+    // Linear Slides Action
+    // ------------------------------------------------ //
     public static class LinearSlides {
         private final VoltageSensor voltageSensor;
         private final DcMotorEx spoolLeft, spoolRight;
 
-        public LinearSlides(HardwareMap hardwareMap) {
-            spoolLeft = hardwareMap.get(DcMotorEx.class, "spoolLeft"); // Port 0
-            spoolRight = hardwareMap.get(DcMotorEx.class, "spoolRight"); // Port 1
+        private final Servo armServo;
 
-            spoolRight.setDirection(DcMotorSimple.Direction.REVERSE);
+        public LinearSlides(HardwareMap hardwareMap) {
+            armServo = hardwareMap.get(Servo.class, "arm");
+
+            spoolLeft = hardwareMap.get(DcMotorEx.class, "spoolLeft");
+            spoolRight = hardwareMap.get(DcMotorEx.class, "spoolRight");
+
+            spoolLeft.setDirection(DcMotorSimple.Direction.REVERSE);
 
             spoolLeft.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
             spoolRight.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
 
             spoolLeft.setTargetPosition(Params.MIN_SPOOL_POSITION);
             spoolRight.setTargetPosition(Params.MIN_SPOOL_POSITION);
-            spoolLeft.setTargetPositionTolerance(Params.SPOOL_POSITION_TOLERANCE);
-            spoolRight.setTargetPositionTolerance(Params.SPOOL_POSITION_TOLERANCE);
 
             spoolLeft.setMode(DcMotor.RunMode.RUN_TO_POSITION);
             spoolRight.setMode(DcMotor.RunMode.RUN_TO_POSITION);
@@ -164,7 +197,7 @@ public class Eureka extends LinearOpMode {
             voltageSensor = hardwareMap.voltageSensor.iterator().next();
         }
 
-        public class RaiseSlides implements Action {
+        public class Raise implements Action {
             private boolean initialized = false;
 
             @Override
@@ -174,28 +207,31 @@ public class Eureka extends LinearOpMode {
                     initialized = true;
                 }
 
-                controller.setPIDF(PIDFParams.kP, PIDFParams.kI, PIDFParams.kD, PIDFParams.kF);
-
                 spoolLeft.setTargetPosition(currentSpoolPosition);
                 spoolRight.setTargetPosition(currentSpoolPosition);
 
                 double voltage = voltageSensor.getVoltage();
                 double averagePID = ((controller.calculate(spoolLeft.getCurrentPosition(), currentSpoolPosition)
                         + controller.calculate(spoolRight.getCurrentPosition(), currentSpoolPosition)) / 2) / voltage;
+                averagePID = Math.floor(averagePID * 100) / 100;
 
                 spoolLeft.setPower(averagePID);
                 spoolRight.setPower(averagePID);
 
-                return ((spoolLeft.getCurrentPosition() >= (currentSpoolPosition - Params.SPOOL_POSITION_TOLERANCE)) &&
-                        (spoolRight.getCurrentPosition() >= (currentSpoolPosition - Params.SPOOL_POSITION_TOLERANCE)));
+                if (averagePID <= 0.5) {
+                    currentArmPosition = Params.ARM_SPECIMEN_POSITION;
+                    armServo.setPosition(currentArmPosition);
+                }
+
+                return (averagePID > 0.01);
             }
         }
 
-        public Action raiseSlides() {
-            return new RaiseSlides();
+        public Action raise() {
+            return new Raise();
         }
 
-        public class LowerSlides implements Action {
+        public class Lower implements Action {
             private boolean initialized = false;
 
             @Override
@@ -205,25 +241,23 @@ public class Eureka extends LinearOpMode {
                     initialized = true;
                 }
 
-                controller.setPIDF(PIDFParams.kP, PIDFParams.kI, PIDFParams.kD, PIDFParams.kF);
-
                 spoolLeft.setTargetPosition(currentSpoolPosition);
                 spoolRight.setTargetPosition(currentSpoolPosition);
 
                 double voltage = voltageSensor.getVoltage();
                 double averagePID = ((controller.calculate(spoolLeft.getCurrentPosition(), currentSpoolPosition)
                         + controller.calculate(spoolRight.getCurrentPosition(), currentSpoolPosition)) / 2) / voltage;
+                averagePID = Math.floor(averagePID * 100) / 100;
 
                 spoolLeft.setPower(averagePID);
                 spoolRight.setPower(averagePID);
 
-                return ((spoolLeft.getCurrentPosition() <= (currentSpoolPosition + Params.SPOOL_POSITION_TOLERANCE)) &&
-                        (spoolRight.getCurrentPosition() <= (currentSpoolPosition + Params.SPOOL_POSITION_TOLERANCE)));
+                return (averagePID > 0.04);
             }
         }
 
-        public Action lowerSlides() {
-            return new LowerSlides();
+        public Action lower() {
+            return new Lower();
         }
     }
 
@@ -231,163 +265,125 @@ public class Eureka extends LinearOpMode {
     // ------------------------------------------------ //
     @Override
     public void runOpMode() throws InterruptedException {
-        Pose2d initalStartingPose = new Pose2d(0, 61.5,  Math.toRadians(-90));
-        MecanumDrive drive = new MecanumDrive(hardwareMap, initalStartingPose);
+        Pose2d initialStartingPose = new Pose2d(0, -61.5,  Math.toRadians(90));
+        MecanumDrive drive = new MecanumDrive(hardwareMap, initialStartingPose);
 
         Claw claw = new Claw(hardwareMap);
         LinearSlides linearSlides = new LinearSlides(hardwareMap);
         Arm arm = new Arm(hardwareMap);
+        Pivot pivot = new Pivot(hardwareMap);
 
-        Action hangPreloadSpecimen = drive.actionBuilder(initalStartingPose)
-                .waitSeconds(0.7)
-                .lineToY(36.5)
+        Action hangPreload = drive.actionBuilder(initialStartingPose)
+                .stopAndAdd(arm.rest())
+                .stopAndAdd(pivot.horizontal())
+
+                .stopAndAdd(new ParallelAction(
+                        drive.actionBuilder(initialStartingPose)
+                                .lineToY(-34)
+                                .build(),
+                        linearSlides.raise()
+                ))
+                .stopAndAdd(new ParallelAction(
+                        drive.actionBuilder(initialStartingPose)
+                                .waitSeconds(0.2)
+                                .stopAndAdd(claw.open())
+                                .build(),
+                        linearSlides.lower()
+                ))
                 .build();
 
-        /*
-        Action grabFirstSample = drive.actionBuilder(new Pose2d(0, 33,  0))
-                .strafeToLinearHeading(new Vector2d(-15, 39), Math.toRadians(0))
-                .lineToX(-54)
-                .turn(Math.toRadians(-85))
-                .stopAndAdd(arm.grabSample())
-                .stopAndAdd(arm.lowerArm())
-                .stopAndAdd(claw.closeClaw())
-                .waitSeconds(2)
-                .turn(Math.toRadians(170))
+        Action pushSamples = drive.actionBuilder(new Pose2d(0, -34, Math.toRadians(90)))
+                // away
+                .stopAndAdd(new ParallelAction(
+                        drive.actionBuilder(new Pose2d(0, -34, Math.toRadians(90)))
+                                .strafeToLinearHeading(new Vector2d(20, -40), Math.toRadians(-90))
+                                .build(),
+                        linearSlides.lower(),
+                        arm.rest()
+                ))
+
+                // sample 1 push
+                .splineToConstantHeading(new Vector2d(39, -9), Math.PI / 3)
+                .splineToConstantHeading(new Vector2d(48, -45), Math.PI / 2)
+
+                // sample 2 push
+                .splineToConstantHeading(new Vector2d(50, -9), Math.PI / 3)
+                .splineToConstantHeading(new Vector2d(58, -45), Math.PI / 2)
+
+                // sample 3 push
+                .splineToConstantHeading(new Vector2d(57, -9), Math.PI / 3)
+                .splineToConstantHeading(new Vector2d(59, -45), Math.PI / 2)
+
+                // load claw
+                .stopAndAdd(new ParallelAction(
+                        drive.actionBuilder(new Pose2d(59, -45, Math.toRadians(-90)))
+                                .splineToLinearHeading(new Pose2d(23, -61.5, Math.toRadians(0)), -Math.PI / 2)
+                                .build(),
+                        arm.lower()
+                ))
+                .waitSeconds(0.2)
+                .stopAndAdd(claw.close())
                 .build();
 
-        Action grabSecondSample = drive.actionBuilder(new Pose2d(-48, 50,  0))
-                .strafeToLinearHeading(new Vector2d(-58.5, 39), Math.toRadians(-90))
+        Action hangSpecimens = drive.actionBuilder(new Pose2d(23, -61.5, Math.toRadians(0)))
+                // specimen 1
+                .stopAndAdd(new ParallelAction(
+                        drive.actionBuilder(new Pose2d(23, -61.5, Math.toRadians(0)))
+                                .strafeToLinearHeading(new Vector2d(1, -33), Math.toRadians(90))
+                                .build(),
+                        linearSlides.raise()
+                ))
+
+                // put on rack
+                .stopAndAdd(new ParallelAction(
+                        drive.actionBuilder(new Pose2d(1, -33, Math.toRadians(90)))
+                                .waitSeconds(0.2)
+                                .stopAndAdd(claw.open())
+                                .build(),
+                        linearSlides.lower()
+                ))
+
+                // grab another specimen
+                .stopAndAdd(new ParallelAction(
+                        drive.actionBuilder(new Pose2d(1, -33, Math.toRadians(90)))
+                                .strafeToLinearHeading(new Vector2d(23, -61.5), Math.toRadians(0))
+                                .build(),
+                        arm.lower()
+                ))
+                .waitSeconds(0.2)
+                .stopAndAdd(claw.close())
+
+                // specimen 2
+                .stopAndAdd(new ParallelAction(
+                        drive.actionBuilder(new Pose2d(23, -61.5, Math.toRadians(0)))
+                                .strafeToLinearHeading(new Vector2d(2, -33), Math.toRadians(90))
+                                .build(),
+                        linearSlides.raise()
+                ))
+
+                // put on rack
+                .stopAndAdd(new ParallelAction(
+                        drive.actionBuilder(new Pose2d(2, -33, Math.toRadians(90)))
+                                .waitSeconds(0.2)
+                                .stopAndAdd(claw.open())
+                                .build(),
+                        linearSlides.lower()
+                ))
                 .build();
 
-        Action depositSample = drive.actionBuilder(new Pose2d(-66, 38.5, 0))
-                .waitSeconds(2)
-                .turn(Math.toRadians(90))
+        Action endAutonomous = drive.actionBuilder(initialStartingPose)
+                .stopAndAdd(arm.rest())
+                .stopAndAdd(linearSlides.lower())
+                .strafeToConstantHeading(new Vector2d(56, -61.5))
                 .build();
-
-        Action initializeFactory = drive.actionBuilder(new Pose2d(-58.5, 50,  0))
-                .setTangent(Math.toRadians(0))
-                .lineToX(-40)
-                .strafeToLinearHeading(new Vector2d(-32.5, 61.5), Math.toRadians(180))
-                .build();
-
-        Action hangLoadedSpecimen = drive.actionBuilder(new Pose2d(-32.5, 61.5,  0))
-                .strafeToLinearHeading(new Vector2d(0, 33), Math.toRadians(-90))
-                .build();
-
-        Action returnToFactory = drive.actionBuilder(new Pose2d(0, 33,  0))
-                .strafeToLinearHeading(new Vector2d(-32.5, 61.5), Math.toRadians(180))
-                .build();
-
-        Action ascendSubmersible = drive.actionBuilder(new Pose2d(0, 33,  0))
-                .strafeToLinearHeading(new Vector2d(-40, 50), Math.toRadians(0))
-                .setTangent(Math.toRadians(-90))
-                .lineToY(10)
-                .setTangent(Math.toRadians(0))
-                .lineToX(-24)
-                .build();
-        */
-
-        Action simultaneousHang = drive.actionBuilder(initalStartingPose)
-                .waitSeconds(0.7)
-                .stopAndAdd(claw.openClaw())
-                .build();
-
-        Action simultaneousGrab = drive.actionBuilder(initalStartingPose)
-                .stopAndAdd(arm.lowerArm())
-                .stopAndAdd(claw.closeClaw())
-                .build();
-
-        Action endAutonomous = drive.actionBuilder(initalStartingPose)
-                .waitSeconds(2)
-                .lineToY(61.5)
-                .build();
-
 
         waitForStart();
 
         Actions.runBlocking(new SequentialAction(
-                        // raise arm + slides while going to specimen bar
-                        new ParallelAction(
-                                arm.hangSpecimen(),
-                                linearSlides.raiseSlides(),
-                                hangPreloadSpecimen
-                        ),
-
-                        // hang
-                        new ParallelAction(
-                                linearSlides.lowerSlides(),
-                                simultaneousHang
-                        ),
-                        claw.openClaw(),
-                        arm.resetArm(),
+                        hangPreload,
+                        pushSamples,
+                        hangSpecimens,
                         endAutonomous
-
-                        /*
-
-                        // go to first sample
-                        grabFirstSample
-
-                        // go to second sample
-                        new ParallelAction(
-                                grabSecondSample,
-                                arm.grabSample()
-                        ),
-                        arm.lowerArm(),
-                        claw.closeClaw(),
-
-                        depositSample,
-                        claw.openClaw(),
-
-                        // initialize factory
-                        new ParallelAction(
-                                initializeFactory,
-                                arm.grabSample()
-                        ),
-                        arm.lowerArm(),
-                        claw.closeClaw(),
-
-                        // get in specimen hanging pos
-                        new ParallelAction(
-                                arm.hangSpecimen(),
-                                linearSlides.raiseSlides(),
-                                hangLoadedSpecimen
-                        ),
-
-                        // hang it
-                        new ParallelAction(
-                                linearSlides.lowerSlides(),
-                                simultaneousHang
-                        ),
-
-                        // return
-                        new ParallelAction(
-                                returnToFactory,
-                                arm.grabSample()
-                        ),
-
-                        // get in specimen hanging pos
-                        new ParallelAction(
-                                arm.hangSpecimen(),
-                                linearSlides.raiseSlides(),
-                                hangLoadedSpecimen
-                        ),
-
-                        // hang it
-                        new ParallelAction(
-                                linearSlides.lowerSlides(),
-                                simultaneousHang
-                        ),
-                        arm.resetArm(),
-
-                        // ascend
-                        new ParallelAction(
-                                linearSlides.raiseSlides(),
-                                arm.hangSpecimen(),
-                                ascendSubmersible
-                        ),
-                        arm.grabSample()
-
-                        */
                 )
         );
     }
