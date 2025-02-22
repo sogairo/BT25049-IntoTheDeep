@@ -1,7 +1,15 @@
+/**
+ *
+ * @author sogairo
+ */
+
 package org.firstinspires.ftc.teamcode;
 
 import androidx.annotation.NonNull;
+
+import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
+import com.acmerobotics.roadrunner.ParallelAction;
 import com.arcrobotics.ftclib.controller.PIDFController;
 
 import com.acmerobotics.roadrunner.Action;
@@ -38,9 +46,7 @@ public class Elucidate extends LinearOpMode {
     public static int currentSpoolPosition = Params.MIN_SPOOL_POSITION;
     public static double currentArmPosition = Params.MIN_ARM_POSITION;
 
-    private static final int setPositionType = Params.SPECIMEN_POSITION;
-
-    // Create Actions for Objects
+    // Claw Action
     // ------------------------------------------------ //
     public static class Claw {
         private final Servo clawServo;
@@ -48,13 +54,13 @@ public class Elucidate extends LinearOpMode {
         public Claw(HardwareMap hardwareMap) {
             clawServo = hardwareMap.get(Servo.class, "claw");
             clawServo.scaleRange(Params.MIN_CLAW_POSITION, Params.MAX_CLAW_POSITION);
-            clawServo.setPosition(0);
+            clawServo.setPosition(1);
         }
 
         public class Close implements Action {
             @Override
             public boolean run(@NonNull TelemetryPacket packet) {
-                clawServo.setPosition(0);
+                clawServo.setPosition(1);
                 return false;
             }
         }
@@ -66,7 +72,7 @@ public class Elucidate extends LinearOpMode {
         public class Open implements Action {
             @Override
             public boolean run(@NonNull TelemetryPacket packet) {
-                clawServo.setPosition(1);
+                clawServo.setPosition(0);
                 return false;
             }
         }
@@ -76,6 +82,44 @@ public class Elucidate extends LinearOpMode {
         }
     }
 
+    // Pivot Action
+    // ------------------------------------------------ //
+    public static class Pivot {
+        private final Servo pivotServo;
+
+        public Pivot(HardwareMap hardwareMap) {
+            pivotServo = hardwareMap.get(Servo.class, "pivot");
+            pivotServo.scaleRange(Params.MIN_PIVOT_POSITION, Params.MAX_PIVOT_POSITION);
+            pivotServo.setPosition(0);
+        }
+
+        public class Horizontal implements Action {
+            @Override
+            public boolean run(@NonNull TelemetryPacket packet) {
+                pivotServo.setPosition(0);
+                return false;
+            }
+        }
+
+        public Action horizontal() {
+            return new Horizontal();
+        }
+
+        public class Vertical implements Action {
+            @Override
+            public boolean run(@NonNull TelemetryPacket packet) {
+                pivotServo.setPosition(1);
+                return false;
+            }
+        }
+
+        public Action vertical() {
+            return new Vertical();
+        }
+    }
+
+    // Arm Action
+    // ------------------------------------------------ //
     public static class Arm {
         private final Servo armServo;
 
@@ -83,45 +127,21 @@ public class Elucidate extends LinearOpMode {
             armServo = hardwareMap.get(Servo.class, "arm");
         }
 
-        public class DropSample implements Action {
-            @Override
-            public boolean run(@NonNull TelemetryPacket packet) {
-                if (currentArmPosition < Params.ARM_SAMPLE_POSITION) {
-                    while (currentArmPosition < Params.ARM_SAMPLE_POSITION) {
-                        if ((currentArmPosition + Params.ARM_INCREMENT) >= Params.ARM_SAMPLE_POSITION) {
-                            currentArmPosition = Params.ARM_SAMPLE_POSITION;
-                        } else {
-                            currentArmPosition += Params.ARM_INCREMENT;
-                        }
-                        armServo.setPosition(currentArmPosition);
-                    }
-                } else {
-                    while (currentArmPosition > Params.ARM_SAMPLE_POSITION) {
-                        if ((currentArmPosition - Params.ARM_INCREMENT) <= Params.ARM_SAMPLE_POSITION) {
-                            currentArmPosition = Params.ARM_SAMPLE_POSITION;
-                        } else {
-                            currentArmPosition -= Params.ARM_INCREMENT;
-                        }
-                        armServo.setPosition(currentArmPosition);
-                    }
-                }
-                return false;
-            }
-        }
-
-        public Action dropSample() {
-            return new DropSample();
-        }
-
         public class Lower implements Action {
             @Override
             public boolean run(@NonNull TelemetryPacket packet) {
                 while (currentArmPosition < Params.MAX_ARM_POSITION) {
-                    if ((currentArmPosition + Params.ARM_INCREMENT) >= Params.MAX_ARM_POSITION) {
+                    if ((currentArmPosition + Params.ARM_AUTONOMOUS_INCREMENT) >= Params.MAX_ARM_POSITION) {
                         currentArmPosition = Params.MAX_ARM_POSITION;
+                        break;
                     } else {
-                        currentArmPosition += Params.ARM_INCREMENT;
+                        currentArmPosition += Params.ARM_AUTONOMOUS_INCREMENT;
                     }
+
+                    TelemetryPacket temp = new TelemetryPacket();
+                    temp.put("CurrentArmPosition", currentArmPosition);
+                    FtcDashboard.getInstance().sendTelemetryPacket(temp);
+
                     armServo.setPosition(currentArmPosition);
                 }
                 return false;
@@ -135,7 +155,8 @@ public class Elucidate extends LinearOpMode {
         public class Rest implements Action {
             @Override
             public boolean run(@NonNull TelemetryPacket packet) {
-                armServo.setPosition(Params.MIN_ARM_POSITION);
+                currentArmPosition = Params.MIN_ARM_POSITION;
+                armServo.setPosition(currentArmPosition);
                 return false;
             }
         }
@@ -145,15 +166,21 @@ public class Elucidate extends LinearOpMode {
         }
     }
 
+    // Linear Slides Action
+    // ------------------------------------------------ //
     public static class LinearSlides {
         private final VoltageSensor voltageSensor;
         private final DcMotorEx spoolLeft, spoolRight;
 
+        private final Servo armServo;
+
         public LinearSlides(HardwareMap hardwareMap) {
+            armServo = hardwareMap.get(Servo.class, "arm");
+
             spoolLeft = hardwareMap.get(DcMotorEx.class, "spoolLeft");
             spoolRight = hardwareMap.get(DcMotorEx.class, "spoolRight");
 
-            spoolRight.setDirection(DcMotorSimple.Direction.REVERSE);
+            spoolLeft.setDirection(DcMotorSimple.Direction.REVERSE);
 
             spoolLeft.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
             spoolRight.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
@@ -191,6 +218,11 @@ public class Elucidate extends LinearOpMode {
                 spoolLeft.setPower(averagePID);
                 spoolRight.setPower(averagePID);
 
+                if (averagePID <= 0.5) {
+                    currentArmPosition = Params.ARM_SAMPLE_POSITION;
+                    armServo.setPosition(currentArmPosition);
+                }
+
                 return (averagePID > 0.01);
             }
         }
@@ -220,7 +252,7 @@ public class Elucidate extends LinearOpMode {
                 spoolLeft.setPower(averagePID);
                 spoolRight.setPower(averagePID);
 
-                return (averagePID > 0.01);
+                return (averagePID > 0.04);
             }
         }
 
@@ -239,78 +271,121 @@ public class Elucidate extends LinearOpMode {
         Claw claw = new Claw(hardwareMap);
         LinearSlides linearSlides = new LinearSlides(hardwareMap);
         Arm arm = new Arm(hardwareMap);
+        Pivot pivot = new Pivot(hardwareMap);
 
         Action dropPreloadSample = drive.actionBuilder(initalStartingPose)
-                .strafeToLinearHeading(new Vector2d(-55, -56), Math.toRadians(225))
-                .stopAndAdd(linearSlides.raise())
-                .stopAndAdd(arm.dropSample())
+                .stopAndAdd(arm.rest())
+                .stopAndAdd(pivot.horizontal())
+
+                // Drop Sample
+                .stopAndAdd(new ParallelAction(
+                        drive.actionBuilder(initalStartingPose)
+                                .strafeToLinearHeading(new Vector2d(-55, -56), Math.toRadians(225))
+                                .build(),
+                        linearSlides.raise()
+                ))
+
                 .waitSeconds(0.5)
                 .stopAndAdd(claw.open())
-                .waitSeconds(0.5)
+                .waitSeconds(0.2)
                 .build();
 
-        Action getSampleOne = drive.actionBuilder(new Pose2d(-55, -56, 0))
-                .stopAndAdd(arm.rest())
-                .stopAndAdd(linearSlides.lower())
-                .strafeToLinearHeading(new Vector2d(-47.5, -45), Math.toRadians(90))
-                .waitSeconds(1)
+        Action getSampleOne = drive.actionBuilder(new Pose2d(-55, -56, Math.toRadians(225)))
+                .stopAndAdd(new ParallelAction(
+                        arm.rest(),
+                        linearSlides.lower()
+                ))
+                .strafeToLinearHeading(new Vector2d(-48.1, -45), Math.toRadians(90)) // TODO: INACCURATE -----------------------------
+                .waitSeconds(0.4)
+
+                // Grab Sample
                 .stopAndAdd(arm.lower())
-                .waitSeconds(2)
+                .waitSeconds(0.2)
                 .stopAndAdd(claw.close())
-                .waitSeconds(1)
+                
+                .waitSeconds(0.2)
+
+                // Reset Arm
                 .stopAndAdd(arm.rest())
+
+                // Drop Sample
+                .stopAndAdd(new ParallelAction(
+                        drive.actionBuilder(new Pose2d(-48.1, -45, Math.toRadians(90)))
+                                .strafeToLinearHeading(new Vector2d(-55, -56), Math.toRadians(225))
+                                .build(),
+                        linearSlides.raise()
+                ))
+
                 .waitSeconds(0.5)
-                .strafeToLinearHeading(new Vector2d(-55, -56), Math.toRadians(225))
-                .stopAndAdd(linearSlides.raise())
-                .stopAndAdd(arm.dropSample())
-                .waitSeconds(1)
                 .stopAndAdd(claw.open())
-                .waitSeconds(1)
+                .waitSeconds(0.2)
                 .build();
 
-        Action getSampleTwo = drive.actionBuilder(new Pose2d(-55, -56, 0))
-                .stopAndAdd(arm.rest())
-                .waitSeconds(0.5)
-                .stopAndAdd(linearSlides.lower())
-                .strafeToLinearHeading(new Vector2d(-55, -58), Math.toRadians(90))
-                .waitSeconds(1)
+        Action getSampleTwo = drive.actionBuilder(new Pose2d(-55, -56, Math.toRadians(225)))
+                .stopAndAdd(new ParallelAction(
+                        arm.rest(),
+                        linearSlides.lower()
+                ))
+                .strafeToLinearHeading(new Vector2d(-59.2, -46), Math.toRadians(95))  // TODO: INACCURATE -----------------------------
+                .waitSeconds(0.4)
+
+                // Grab Sample
                 .stopAndAdd(arm.lower())
-                .waitSeconds(2)
+                .waitSeconds(0.2)
                 .stopAndAdd(claw.close())
-                .waitSeconds(1)
+                .waitSeconds(0.2)
+
+                // Reset Arm
                 .stopAndAdd(arm.rest())
+
+                // Drop Sample
+                .stopAndAdd(new ParallelAction(
+                        drive.actionBuilder(new Pose2d(-59.2, -46, Math.toRadians(95)))
+                                .waitSeconds(0.3)
+                                .strafeToLinearHeading(new Vector2d(-55, -56), Math.toRadians(225))
+                                .build(),
+                        linearSlides.raise()
+                ))
+
                 .waitSeconds(0.5)
-                .strafeToLinearHeading(new Vector2d(-55, -56), Math.toRadians(225))
-                .stopAndAdd(linearSlides.raise())
-                .stopAndAdd(arm.dropSample())
-                .waitSeconds(1)
                 .stopAndAdd(claw.open())
-                .waitSeconds(1)
+                .waitSeconds(0.2)
                 .build();
 
-        Action getSampleThree = drive.actionBuilder(new Pose2d(-55, -56, 0))
-                .stopAndAdd(arm.rest())
-                .waitSeconds(0.5)
-                .stopAndAdd(linearSlides.lower())
-                .strafeToLinearHeading(new Vector2d(-49, -26), Math.toRadians(180))
-                .waitSeconds(1)
+        Action getSampleThree = drive.actionBuilder(new Pose2d(-55, -56, Math.toRadians(225)))
+                .stopAndAdd(pivot.vertical())
+                .stopAndAdd(new ParallelAction(
+                        arm.rest(),
+                        linearSlides.lower()
+                ))
+                .strafeToLinearHeading(new Vector2d(-51.2, -25), Math.toRadians(190))  // TODO: INACCURATE -----------------------------
+                //.waitSeconds(0.4)
+
+                // Grab sample
                 .stopAndAdd(arm.lower())
-                .waitSeconds(2)
+                .waitSeconds(0.2)
                 .stopAndAdd(claw.close())
-                .waitSeconds(1)
+                .waitSeconds(0.2)
+
+                // Reset arm
                 .stopAndAdd(arm.rest())
+
+                // Drop Sample
+                .stopAndAdd(new ParallelAction(
+                        drive.actionBuilder(new Pose2d(-51.2, -25, Math.toRadians(190)))
+                                .strafeToLinearHeading(new Vector2d(-53, -57), Math.toRadians(230))
+                                .build(),
+                        linearSlides.raise()
+                ))
+
                 .waitSeconds(0.5)
-                .strafeToLinearHeading(new Vector2d(-55, -56), Math.toRadians(225))
-                .stopAndAdd(linearSlides.raise())
-                .stopAndAdd(arm.dropSample())
-                .waitSeconds(1)
                 .stopAndAdd(claw.open())
-                .waitSeconds(1)
+                .waitSeconds(0.2)
                 .build();
 
         Action endAutonomous = drive.actionBuilder(initalStartingPose)
                 .stopAndAdd(arm.rest())
-                .waitSeconds(0.5)
+                .waitSeconds(1)
                 .stopAndAdd(linearSlides.lower())
                 .waitSeconds(2)
                 .build();
