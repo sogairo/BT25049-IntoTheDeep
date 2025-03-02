@@ -297,9 +297,11 @@ public final class MecanumDrive {
             Pose2d error = txWorldTarget.value().minusExp(localizer.getPose());
 
             // Extra position correction
+            /*
             if ((t >= timeTrajectory.duration && error.position.norm() < 2
                     && robotVelRobot.linearVel.norm() < 0.5)
                     || t >= timeTrajectory.duration + 0.25) {
+             */
 
                 // Extra degree correction
                 // TODO: Check if this works
@@ -313,7 +315,7 @@ public final class MecanumDrive {
 
                     return false;
                 }
-            }
+            //}
 
             PoseVelocity2dDual<Time> command = new HolonomicController(
                     PARAMS.axialGain, PARAMS.lateralGain, PARAMS.headingGain,

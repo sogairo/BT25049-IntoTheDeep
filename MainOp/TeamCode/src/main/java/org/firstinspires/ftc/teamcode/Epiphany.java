@@ -42,17 +42,17 @@ public class Epiphany extends LinearOpMode {
         public double MAX_ARM_POSITION = 0.985;
         public double MIN_ARM_POSITION = 0;
         public double ARM_INCREMENT = 0.04;
-        public double ARM_AUTONOMOUS_INCREMENT = 0.0015;
+        public double ARM_AUTONOMOUS_INCREMENT = 0.00125;
 
         public double ARM_SAMPLE_POSITION = 0.5;
         public double ARM_SPECIMEN_POSITION = 0.48;
         public double ARM_GRAB_POSITION = 0.88;
 
         public double MIN_CLAW_POSITION = 0.35;
-        public double MAX_CLAW_POSITION = 0.7;
+        public double MAX_CLAW_POSITION = 0.8;
 
-        public double MIN_PIVOT_POSITION = 0.13;
-        public double MAX_PIVOT_POSITION = 0.7;
+        public double MIN_PIVOT_POSITION = 0.065;
+        public double MAX_PIVOT_POSITION = 0.625;
     }
 
     public static Epiphany.Configuration Params = new Epiphany.Configuration();
@@ -71,7 +71,7 @@ public class Epiphany extends LinearOpMode {
     // Initialize Variables
     // ------------------------------------------------ //
     public static int currentSpoolPosition = Params.MIN_SPOOL_POSITION;
-    public static int currentSpoolIncrement = Params.SPOOL_DEFAULT_INCREMENT;
+    private static int currentSpoolIncrement = Params.SPOOL_DEFAULT_INCREMENT;
     private int setPositionType = Params.SAMPLE_BASKET_POSITION;
 
     private double currentArmPosition = Params.MIN_ARM_POSITION;

@@ -7,7 +7,6 @@ package org.firstinspires.ftc.teamcode;
 
 import androidx.annotation.NonNull;
 
-import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 import com.acmerobotics.roadrunner.Action;
 import com.acmerobotics.roadrunner.ParallelAction;
@@ -43,7 +42,7 @@ public class Eureka extends LinearOpMode {
     // Initalize Variables
     // ------------------------------------------------ //
     public static int currentSpoolPosition = Params.MIN_SPOOL_POSITION;
-    public static double currentArmPosition = Params.MIN_ARM_POSITION;
+    private static double currentArmPosition = Params.MIN_ARM_POSITION;
 
 
     // Claw Action
@@ -138,10 +137,6 @@ public class Eureka extends LinearOpMode {
                         currentArmPosition += Params.ARM_AUTONOMOUS_INCREMENT;
                     }
 
-                    TelemetryPacket temp = new TelemetryPacket();
-                    temp.put("CurrentArmPosition", currentArmPosition);
-                    FtcDashboard.getInstance().sendTelemetryPacket(temp);
-
                     armServo.setPosition(currentArmPosition);
                 }
                 return false;
@@ -222,8 +217,7 @@ public class Eureka extends LinearOpMode {
                     currentArmPosition = Params.ARM_SPECIMEN_POSITION;
                     armServo.setPosition(currentArmPosition);
                 }
-
-                return (averagePID > 0.01);
+                return ((spoolLeft.getCurrentPosition() < currentSpoolPosition - 15) && (spoolRight.getCurrentPosition() < currentSpoolPosition - 15));
             }
         }
 
@@ -252,7 +246,12 @@ public class Eureka extends LinearOpMode {
                 spoolLeft.setPower(averagePID);
                 spoolRight.setPower(averagePID);
 
-                return (averagePID > 0.04);
+                if ((spoolLeft.getCurrentPosition() < currentSpoolPosition + 15) || (spoolRight.getCurrentPosition() < currentSpoolPosition + 15)) {
+                    spoolRight.setPower(0);
+                    spoolLeft.setPower(0);
+                    return false;
+                }
+                return true;
             }
         }
 
@@ -371,10 +370,13 @@ public class Eureka extends LinearOpMode {
                 ))
                 .build();
 
-        Action endAutonomous = drive.actionBuilder(initialStartingPose)
-                .stopAndAdd(arm.rest())
-                .stopAndAdd(linearSlides.lower())
-                .strafeToConstantHeading(new Vector2d(56, -61.5))
+        Action endAutonomous = drive.actionBuilder(new Pose2d(2, -33, Math.toRadians(90)))
+                .stopAndAdd(new ParallelAction(
+                        arm.rest(),
+                        drive.actionBuilder(new Pose2d(2, -33, Math.toRadians(90)))
+                                .strafeToConstantHeading(new Vector2d(56, -61.5))
+                                .build()
+                ))
                 .build();
 
         waitForStart();
