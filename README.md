@@ -6,11 +6,16 @@ This is BT25049/BudjetTech's code used for the 2024-2025 FTC Into The Deep compe
 ## Table of Contents
 
 - [Getting Started](#getting-started)
+- [Advice](#advice)
 - [Notes](#notes)
 
 ## Getting Started
 
 Follow the guide in [SETUP.md](./SETUP.md)
+
+## Advice
+
+See [ADVICE.md](./ADVICE.md)
 
 ## Notes
 
